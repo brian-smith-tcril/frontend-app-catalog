@@ -1,6 +1,7 @@
+import HomeBannerSlot from '../plugin-slots/HomeBannerSlot';
+
 const HomePage = () => (
-  // TODO: remove it when will start develop page
-  <div data-testid="home-page" />
+  <HomeBannerSlot />
 );
 
 export default HomePage;

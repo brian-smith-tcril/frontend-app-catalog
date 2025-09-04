@@ -10,9 +10,9 @@ import App from './App';
 jest.mock('@edx/frontend-platform', () => ({
   getAuthenticatedUser: jest.fn(() => ({ username: 'test-user', roles: [] })),
   getConfig: jest.fn(() => ({
-    LMS_BASE_URL: '',
-    ENABLE_PROGRAMS: true,
-    ENABLE_COURSE_DISCOVERY: true,
+    LMS_BASE_URL: process.env.LMS_BASE_URL,
+    ENABLE_PROGRAMS: process.env.ENABLE_PROGRAMS,
+    ENABLE_COURSE_DISCOVERY: process.env.ENABLE_COURSE_DISCOVERY,
   })),
 }));
 
@@ -45,11 +45,16 @@ describe('App', () => {
     isError: false,
   });
 
-  it('renders HomePage on "/" route', () => {
+  it('renders HomePage on "/" route', async () => {
     window.testHistory = [ROUTES.HOME];
 
     render(<App />);
-    expect(screen.getByTestId('home-page')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('home-banner')).toBeInTheDocument();
   });
 
   it('renders CatalogPage with course cards at /courses route', async () => {
