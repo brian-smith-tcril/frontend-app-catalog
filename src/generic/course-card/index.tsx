@@ -1,51 +1,54 @@
 import { Link } from 'react-router-dom';
-import { Card, useMediaQuery, breakpoints } from '@openedx/paragon';
+import {
+  Card, useMediaQuery, breakpoints, Badge,
+} from '@openedx/paragon';
 import { useIntl } from '@edx/frontend-platform/i18n';
 
 import noCourseImg from '@src/assets/images/no-course-image.svg';
-import noOrgImg from '@src/assets/images/no-org-image.svg';
 
 import { CourseCardProps } from './types';
 import messages from './messages';
-import { getFullImageUrl } from './utils';
-import { DATE_FORMAT_OPTIONS } from './constants';
+import { getFullImageUrl, getStartDateDisplay } from './utils';
 
 // TODO: Determine the final design for the course Card component.
 // Issue: https://github.com/openedx/frontend-app-catalog/issues/10
-export const CourseCard = ({ course }: CourseCardProps) => {
+export const CourseCard = ({ course, isLoading }: CourseCardProps) => {
   const intl = useIntl();
   const isExtraSmall = useMediaQuery({ maxWidth: breakpoints.small.maxWidth });
 
-  const formattedDate = course?.data?.start
-    ? intl.formatDate(new Date(course.data.start), DATE_FORMAT_OPTIONS)
-    : '';
+  const startDateDisplay = course ? getStartDateDisplay(course, intl) : null;
 
   return (
     <Card
-      as={Link}
-      to={`/courses/${course.id}/about`}
-      className={`course-card ${isExtraSmall ? 'w-100' : 'course-card-desktop'}`}
-      isClickable
+      as={course ? Link : 'div'}
+      to={course ? `/courses/${course?.id}/about` : undefined}
+      // TODO: Temporary use of `d-flex` to fix alignment. Remove once the related Paragon issue
+      // (https://github.com/openedx/paragon/issues/3792) is resolved.
+      className={`course-card d-flex ${isExtraSmall ? 'w-100' : 'course-card-desktop'}`}
+      isClickable={!isLoading}
+      isLoading={isLoading}
+      data-testid="course-card"
     >
       <Card.ImageCap
-        src={getFullImageUrl(course.data.imageUrl)}
+        src={getFullImageUrl(course?.data.imageUrl)}
         fallbackSrc={noCourseImg}
-        srcAlt={course.data.content.displayName}
-        logoSrc={course.data.orgImg ? getFullImageUrl(course.data.orgImg) : undefined}
-        fallbackLogoSrc={!course.data.orgImg && noOrgImg}
-        logoAlt={course.data.org}
+        srcAlt={`${course?.data.content.displayName} ${course?.data.number}`}
       />
-      <Card.Section>
-        <h3 className="m-0">{course.data.content.displayName}</h3>
-        <p className="m-0">{course.data.org}</p>
-        {formattedDate && (
-          <span>
-            {intl.formatMessage(messages.startDate, {
-              startDate: formattedDate,
-            })}
-          </span>
+      <Card.Header
+        title={course?.data.content.displayName}
+        subtitle={(
+          <>
+            <div>{course?.data.number}</div>
+            <Badge variant="light">{course?.data.org}</Badge>
+          </>
         )}
-      </Card.Section>
+        size="sm"
+      />
+      <Card.Section />
+      <Card.Footer textElement={startDateDisplay && intl.formatMessage(messages.startDate, {
+        startDate: startDateDisplay,
+      })}
+      />
     </Card>
   );
 };

@@ -2,12 +2,11 @@ import { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 
-import { renderHook, waitFor } from '../../../setupTest';
-import { mockCourseDiscoveryResponse } from '../../__mocks__';
-import { fetchCourseDiscovery } from '../api';
-import { useCourseDiscovery } from '../hooks';
-import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_INDEX } from '../constants';
-import { getCourseDiscoveryUrl } from '../urls';
+import { renderHook, waitFor } from '@src/setupTest';
+import { mockCourseListSearchResponse } from '@src/__mocks__';
+import { fetchCourseListSearch } from '../api';
+import { useCourseListSearch } from '../hooks';
+import { getCourseListSearchUrl } from '../urls';
 
 jest.mock('@edx/frontend-platform/auth', () => ({
   getAuthenticatedHttpClient: jest.fn(),
@@ -15,36 +14,37 @@ jest.mock('@edx/frontend-platform/auth', () => ({
 
 const mockGetAuthenticatedHttpClient = getAuthenticatedHttpClient as jest.Mock;
 
-describe('Course Discovery Data Layer', () => {
-  describe('fetchCourseDiscovery', () => {
+const CUSTOM_PAGE_SIZE = 21;
+const CUSTOM_PAGE_INDEX = 2;
+
+describe('Course List Search Data Layer', () => {
+  describe('fetchCourseListSearch', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('should fetch course discovery data with default parameters', async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseDiscoveryResponse });
+    it('should fetch course list search data with default parameters', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseListSearchResponse });
       mockGetAuthenticatedHttpClient.mockReturnValue({ post: mockPost });
 
-      const result = await fetchCourseDiscovery();
+      const result = await fetchCourseListSearch();
 
-      expect(mockPost).toHaveBeenCalledWith(getCourseDiscoveryUrl(), {
-        page_size: DEFAULT_PAGE_SIZE,
-        page_index: DEFAULT_PAGE_INDEX,
-      });
-      expect(result).toEqual(mockCourseDiscoveryResponse);
+      expect(mockPost).toHaveBeenCalledTimes(1);
+      const [url] = mockPost.mock.calls[0];
+      expect(url).toBe(getCourseListSearchUrl());
+      expect(result).toEqual(mockCourseListSearchResponse);
     });
 
-    it('should fetch course discovery data with custom parameters', async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseDiscoveryResponse });
+    it('should fetch course list search data with custom parameters', async () => {
+      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseListSearchResponse });
       mockGetAuthenticatedHttpClient.mockReturnValue({ post: mockPost });
 
-      const customPageSize = 21;
-      const customPageIndex = 2;
+      await fetchCourseListSearch(CUSTOM_PAGE_SIZE, CUSTOM_PAGE_INDEX, true);
 
-      await fetchCourseDiscovery(customPageSize, customPageIndex);
+      const [url, formData] = mockPost.mock.calls[0];
 
-      expect(mockPost).toHaveBeenCalledWith(getCourseDiscoveryUrl(), {
-        page_size: customPageSize,
-        page_index: customPageIndex,
-      });
+      expect(url).toBe(getCourseListSearchUrl());
+      expect((formData as FormData).get('page_size')).toBe(String(CUSTOM_PAGE_SIZE));
+      expect((formData as FormData).get('page_index')).toBe(String(CUSTOM_PAGE_INDEX));
+      expect((formData as FormData).get('enable_course_sorting_by_start_date')).toBe('true');
     });
 
     it('should handle API errors', async () => {
@@ -52,11 +52,11 @@ describe('Course Discovery Data Layer', () => {
       const mockPost = jest.fn().mockRejectedValue(error);
       mockGetAuthenticatedHttpClient.mockReturnValue({ post: mockPost });
 
-      await expect(fetchCourseDiscovery()).rejects.toThrow('API Error');
+      await expect(fetchCourseListSearch()).rejects.toThrow('API Error');
     });
   });
 
-  describe('useCourseDiscovery', () => {
+  describe('useCourseListSearch', () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -77,26 +77,26 @@ describe('Course Discovery Data Layer', () => {
     });
 
     it('should return loading state initially', () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseDiscoveryResponse });
+      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseListSearchResponse });
       mockGetAuthenticatedHttpClient.mockReturnValue({ post: mockPost });
 
-      const { result } = renderHook(() => useCourseDiscovery(), { wrapper });
+      const { result } = renderHook(() => useCourseListSearch(), { wrapper });
 
       expect(result.current.isLoading).toBe(true);
       expect(result.current.data).toBeUndefined();
     });
 
     it('should return data when fetch is successful', async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseDiscoveryResponse });
+      const mockPost = jest.fn().mockResolvedValue({ data: mockCourseListSearchResponse });
       mockGetAuthenticatedHttpClient.mockReturnValue({ post: mockPost });
 
-      const { result } = renderHook(() => useCourseDiscovery(), { wrapper });
+      const { result } = renderHook(() => useCourseListSearch(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.data).toEqual(mockCourseDiscoveryResponse);
+      expect(result.current.data).toEqual(mockCourseListSearchResponse);
       expect(result.current.isError).toBe(false);
     });
 
@@ -105,7 +105,7 @@ describe('Course Discovery Data Layer', () => {
       const mockPost = jest.fn().mockRejectedValue(error);
       mockGetAuthenticatedHttpClient.mockReturnValue({ post: mockPost });
 
-      const { result } = renderHook(() => useCourseDiscovery(), { wrapper });
+      const { result } = renderHook(() => useCourseListSearch(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);

@@ -10,7 +10,8 @@ export interface CourseData {
   start: string;
   imageUrl: string;
   org: string;
-  orgImg?: string;
+  orgImageUrl?: string;
+  advertisedStart?: string;
   content: CourseContent;
   number: string;
   modes: string[];
@@ -26,5 +27,6 @@ export interface Course {
 }
 
 export interface CourseCardProps {
-  course: Course;
+  course?: Course;
+  isLoading?: boolean;
 }

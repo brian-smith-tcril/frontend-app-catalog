@@ -1,10 +1,15 @@
 import { getConfig } from '@edx/frontend-platform';
 
 import {
-  render, screen, waitFor, userEvent,
+  render, screen, waitFor, userEvent, within,
 } from '@src/setupTest';
 import genericMessages from '@src/generic/video-modal/messages';
-import { IFRAME_FEATURE_POLICY, DEFAULT_VIDEO_MODAL_HEIGHT } from '../constants';
+import courseCardMessages from '@src/generic/course-card/messages';
+import { useCourseListSearch } from '@src/data/course-list-search/hooks';
+import { mockCourseListSearchResponse } from '@src/__mocks__';
+import {
+  IFRAME_FEATURE_POLICY, DEFAULT_VIDEO_MODAL_HEIGHT, DATE_FORMAT_OPTIONS,
+} from '../constants';
 import HomePage from './HomePage';
 import messages from './components/home-banner/messages';
 
@@ -17,7 +22,18 @@ jest.mock('@edx/frontend-platform', () => ({
   ensureConfig: jest.fn(),
 }));
 
+jest.mock('@src/data/course-list-search/hooks', () => ({
+  useCourseListSearch: jest.fn(),
+}));
+
+const mockCourseListSearch = useCourseListSearch as jest.Mock;
+
 describe('HomePage', () => {
+  mockCourseListSearch.mockReturnValue({
+    data: mockCourseListSearchResponse,
+    isLoading: false,
+    isError: false,
+  });
   it('renders without crashing', () => {
     render(<HomePage />);
 
@@ -80,5 +96,130 @@ describe('HomePage', () => {
     expect(screen.getByTestId('home-banner')).toBeInTheDocument();
     expect(screen.queryByRole('search')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(messages.searchPlaceholder.defaultMessage)).not.toBeInTheDocument();
+  });
+
+  describe('CoursesList', () => {
+    it('renders course cards with correct count', async () => {
+      render(<HomePage />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+      });
+
+      const courseCards = screen.getAllByRole('link');
+      expect(courseCards.length).toBe(mockCourseListSearchResponse.results.length);
+    });
+
+    it('renders course cards with correct links', async () => {
+      render(<HomePage />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+      });
+
+      const courseCards = screen.getAllByRole('link');
+
+      courseCards.forEach((card, index) => {
+        const course = mockCourseListSearchResponse.results[index];
+        expect(card).toHaveAttribute('href', `/courses/${course.id}/about`);
+      });
+    });
+
+    it('renders course images with correct URLs and alt text', async () => {
+      render(<HomePage />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+      });
+
+      const courseCards = screen.getAllByRole('link');
+
+      courseCards.forEach((card, index) => {
+        const course = mockCourseListSearchResponse.results[index];
+        const cardContent = within(card);
+
+        const courseImage = cardContent.getByAltText(`${course.data.content.displayName} ${course.data.number}`);
+        expect(courseImage).toHaveAttribute('src', `${getConfig().LMS_BASE_URL}${course.data.imageUrl}`);
+      });
+    });
+
+    it('renders course text content correctly', async () => {
+      render(<HomePage />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+      });
+
+      const courseCards = screen.getAllByRole('link');
+
+      courseCards.forEach((card, index) => {
+        const course = mockCourseListSearchResponse.results[index];
+        const cardContent = within(card);
+
+        expect(cardContent.getByText(course.data.content.displayName)).toBeInTheDocument();
+        expect(cardContent.getByText(course.data.org)).toBeInTheDocument();
+        expect(cardContent.getByText(course.data.number)).toBeInTheDocument();
+      });
+    });
+
+    it('renders course start dates correctly with advertisedStart priority', async () => {
+      render(<HomePage />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+      });
+
+      const courseCards = screen.getAllByRole('link');
+
+      courseCards.forEach((card, index) => {
+        const course = mockCourseListSearchResponse.results[index];
+        const cardContent = within(card);
+
+        expect(cardContent.getByText(
+          courseCardMessages.startDate.defaultMessage.replace('{startDate}', course.data.advertisedStart),
+        )).toBeInTheDocument();
+      });
+    });
+
+    it('renders formatted start date when advertisedStart is not available', async () => {
+      const mockResponseWithoutAdvertisedStart = {
+        ...mockCourseListSearchResponse,
+        results: mockCourseListSearchResponse.results.map(course => ({
+          ...course,
+          data: {
+            ...course.data,
+            advertisedStart: undefined,
+          },
+        })),
+      };
+
+      mockCourseListSearch.mockReturnValueOnce({
+        data: mockResponseWithoutAdvertisedStart,
+        isLoading: false,
+        isError: false,
+      });
+
+      render(<HomePage />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
+      });
+
+      const courseCards = screen.getAllByRole('link');
+
+      courseCards.forEach((card, index) => {
+        const course = mockResponseWithoutAdvertisedStart.results[index];
+        const cardContent = within(card);
+
+        const expectedDate = new Intl.DateTimeFormat(
+          'en-US',
+          DATE_FORMAT_OPTIONS,
+        ).format(new Date(course.data.start));
+
+        expect(cardContent.getByText(
+          courseCardMessages.startDate.defaultMessage.replace('{startDate}', expectedDate),
+        )).toBeInTheDocument();
+      });
+    });
   });
 });

@@ -1,4 +1,4 @@
-export const mockCourseDiscoveryResponse = {
+export const mockCourseListSearchResponse = {
   took: 1,
   total: 3,
   results: [
@@ -18,6 +18,8 @@ export const mockCourseDiscoveryResponse = {
         start: '2030-01-01T00:00:00',
         number: '123',
         org: 'OpenEdx',
+        orgImageUrl: '/asset-v1:OpenEdx+123+2023+type@asset+block@org_image.jpg',
+        advertisedStart: 'Winter 2025',
         modes: [
           'audit',
         ],
@@ -41,6 +43,8 @@ export const mockCourseDiscoveryResponse = {
         start: '2030-01-01T00:00:00',
         number: '312',
         org: 'OpenEdx',
+        orgImageUrl: '/asset-v1:OpenEdx+312+2024+type@asset+block@org_image.jpg',
+        advertisedStart: 'Winter 2025',
         modes: [
           'audit',
         ],
@@ -64,6 +68,8 @@ export const mockCourseDiscoveryResponse = {
         start: '2030-01-01T00:00:00',
         number: '654',
         org: 'dev',
+        orgImageUrl: '/asset-v1:dev+654+2024+type@asset+block@org_image.jpg',
+        advertisedStart: 'Winter 2025',
         modes: [
           'audit',
         ],

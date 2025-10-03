@@ -1,4 +1,4 @@
-# Home banner slot
+# Home page banner slot
 
 ### Slot ID: `org.openedx.frontend.catalog.home_page.banner`
 
@@ -29,7 +29,7 @@ const config = {
         {
           op: PLUGIN_OPERATIONS.Insert,
           widget: {
-            id: 'custom_home_banner_component',
+            id: 'custom_home_page_banner_component',
             type: DIRECT_PLUGIN,
             RenderWidget: () => (
               <h1 style={{textAlign: 'center'}}>🦶</h1>
