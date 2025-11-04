@@ -20,16 +20,3 @@
     margin-bottom: var(--pgn-spacing-spacer-2-5);
   }
 }
-
-.course-about-intro-wrapper {
-  @media (--pgn-size-breakpoint-max-width-xl) {
-    .row {
-      flex-direction: column-reverse;
-      align-items: center;
-
-      .course-media-wrapper {
-        margin-bottom: var(--pgn-spacing-spacer-base);
-      }
-    }
-  }
-}
