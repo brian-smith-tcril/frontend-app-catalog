@@ -3,6 +3,7 @@ import { IntlShape } from '@edx/frontend-platform/i18n';
 import capitalize from 'lodash.capitalize';
 
 import type { Aggregations, DataTableFilter } from '@src/data/course-list-search/types';
+import type { GetPageTitleProps } from './types';
 import messages from './messages';
 
 /**
@@ -81,4 +82,23 @@ export const compareFilters = (
   const set2 = new Set(filters2.map(createFilterKey));
 
   return set1.size === set2.size && [...set1].every(key => set2.has(key));
+};
+
+/**
+ * Determines the appropriate page title based on search state and results.
+ */
+export const getPageTitle = ({
+  intl,
+  searchString,
+  courseData,
+}: GetPageTitleProps) => {
+  if (!searchString) {
+    return intl.formatMessage(messages.exploreCourses);
+  }
+
+  if ((courseData?.results?.length ?? 0) === 0) {
+    return intl.formatMessage(messages.noSearchResults, { query: searchString });
+  }
+
+  return intl.formatMessage(messages.searchResults, { query: searchString });
 };
