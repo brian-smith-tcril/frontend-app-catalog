@@ -1,15 +1,70 @@
-// TODO: Temporary placeholder for the course overview
-export const CourseOverview = () => (
-  <div>
-    <h2>About This Course</h2>
-    <p>
-      Lorem Ipsum is simply dummy text of the printing and typesetting industry.
-      Lorem Ipsum has been the industry&apos;s standard dummy text ever since the 1500s,
-      when an unknown printer took a galley of type and scrambled it to make a type specimen book.
-      It has survived not only five centuries, but also the leap into electronic typesetting,
-      remaining essentially unchanged. It was popularised in the 1960s with the release
-      of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop
-      publishing software like Aldus PageMaker including versions of Lorem Ipsum.
-    </p>
-  </div>
-);
+import {
+  Button, Container, useMediaQuery, breakpoints, Card, ActionRow,
+} from '@openedx/paragon';
+import { getConfig } from '@edx/frontend-platform';
+import { useIntl } from '@edx/frontend-platform/i18n';
+import { getAuthenticatedUser } from '@edx/frontend-platform/auth';
+
+import messages from '../messages';
+import type { CourseOverviewProps } from './types';
+import { processOverviewContent } from './utils';
+
+export const CourseOverview = ({ overviewData, courseId }: CourseOverviewProps) => {
+  const intl = useIntl();
+  const authenticatedUser = getAuthenticatedUser();
+  const isGlobalStaff = authenticatedUser?.administrator || false;
+  const isExtraSmall = useMediaQuery({ maxWidth: breakpoints.extraSmall.maxWidth });
+
+  const processedOverviewData = processOverviewContent(overviewData, getConfig().LMS_BASE_URL);
+  const hasOverviewContent = processedOverviewData.trim().length > 0;
+
+  if (!hasOverviewContent) {
+    if (!isGlobalStaff) {
+      return null;
+    }
+
+    return (
+      <ActionRow>
+        <Button
+          as="a"
+          size="sm"
+          block={isExtraSmall}
+          variant="outline-primary"
+          href={`${getConfig().STUDIO_BASE_URL}/settings/details/${courseId}`}
+        >
+          {intl.formatMessage(messages.viewAboutPageInStudio)}
+        </Button>
+      </ActionRow>
+    );
+  }
+
+  return (
+    <Container className="px-0">
+      <Card>
+        {isGlobalStaff && (
+          <Card.Header
+            actions={(
+              <ActionRow>
+                <Button
+                  as="a"
+                  size="sm"
+                  block={isExtraSmall}
+                  variant="outline-primary"
+                  href={`${getConfig().STUDIO_BASE_URL}/settings/details/${courseId}`}
+                >
+                  {intl.formatMessage(messages.viewAboutPageInStudio)}
+                </Button>
+              </ActionRow>
+            )}
+          />
+        )}
+        <Card.Section>
+          {
+            /* eslint-disable-next-line react/no-danger */
+            <div dangerouslySetInnerHTML={{ __html: processedOverviewData }} />
+          }
+        </Card.Section>
+      </Card>
+    </Container>
+  );
+};
