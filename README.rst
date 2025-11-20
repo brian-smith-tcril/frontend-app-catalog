@@ -18,6 +18,47 @@ This is the Catalog micro-frontend application, currently under development.
 These are public-facing pages intended for unauthenticated users.
 The goal is to replace legacy views in ``edx-platform`` with modern, React and Paragon-based implementations.
 
+Installing
+**********
+
+As of the `Open edX Ulmo release <https://docs.openedx.org/en/latest/community/release_notes/ulmo.html>`_,
+this MFE can be installed and configured to replace the legacy Home, Course About, and Course Catalog pages.
+
+This involves
+
+* Hosting the MFE bundle
+* Setting ``CATALOG_MICROFRONTEND_URL``
+
+Installing in Tutor
+===================
+
+The following Tutor plugin code can be used to install and configure this MFE in a Tutor environment.
+
+.. code-block:: python3
+
+  from tutormfe.hooks import MFE_APPS
+  from tutor import hooks
+
+  @MFE_APPS.add()
+  def _add_catalog_mfe(mfes):
+      mfes["catalog"] = {
+          "repository": "https://github.com/openedx/frontend-app-catalog.git",
+          "port": 1998,
+          "version": "master", # optional, will default to the Open edX current tag.
+      }
+      return mfes
+
+  fstring = f"""
+  CATALOG_MICROFRONTEND_URL = "http://{{ MFE_HOST }}:{{ get_mfe('catalog')['port] }}/catalog"
+  """
+
+  hooks.Filters.ENV_PATCHES.add_item(
+      (
+          "openedx-lms-common-settings",
+          "CATALOG_MICROFRONTEND_URL = 'http://apps.local.openedx.io:1998/catalog'"
+      )
+  )
+
 Getting Started
 ***************
 
