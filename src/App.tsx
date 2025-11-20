@@ -15,16 +15,18 @@ const queryClient = new QueryClient();
 const App = () => (
   <AppProvider>
     <QueryClientProvider client={queryClient}>
-      <CatalogHeader />
-      <main className="d-flex flex-column flex-grow-1">
-        <Routes>
-          <Route path={ROUTES.HOME} element={<HomePage />} />
-          <Route path={ROUTES.COURSES} element={<CatalogPage />} />
-          <Route path={ROUTES.COURSE_ABOUT} element={<CourseAboutPage />} />
-          <Route path={ROUTES.NOT_FOUND} element={<NotFoundPage />} />
-        </Routes>
-      </main>
-      <FooterSlot />
+      <div className="d-flex flex-column min-dvh-100">
+        <CatalogHeader />
+        <main className="d-flex flex-column flex-grow-1">
+          <Routes>
+            <Route path={ROUTES.HOME} element={<HomePage />} />
+            <Route path={ROUTES.COURSES} element={<CatalogPage />} />
+            <Route path={ROUTES.COURSE_ABOUT} element={<CourseAboutPage />} />
+            <Route path={ROUTES.NOT_FOUND} element={<NotFoundPage />} />
+          </Routes>
+        </main>
+        <FooterSlot />
+      </div>
     </QueryClientProvider>
   </AppProvider>
 );
