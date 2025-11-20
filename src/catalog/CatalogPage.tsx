@@ -121,7 +121,6 @@ const CatalogPage = () => {
                 setSearchInput(value);
                 handleSearch(value);
               }}
-              submitButtonLocation="external"
             />
           )}
           <DataTable
