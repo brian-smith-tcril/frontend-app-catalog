@@ -25,14 +25,9 @@ const HomeBanner = () => {
       <SearchField
         placeholder={intl.formatMessage(messages.searchPlaceholder)}
         value={searchValue}
+        submitButtonLocation="external"
         onChange={(value: string) => setSearchValue(value)}
-        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            handleSearch();
-          }
-        }}
-        onSubmit={() => {}}
+        onSubmit={handleSearch}
       />
     </Form.Group>
   );
