@@ -61,7 +61,7 @@ export const CourseOverview = ({ overviewData, courseId }: CourseOverviewProps) 
         <Card.Section>
           {
             /* eslint-disable-next-line react/no-danger */
-            <div dangerouslySetInnerHTML={{ __html: processedOverviewData }} />
+            <div className="course-about-overview" dangerouslySetInnerHTML={{ __html: processedOverviewData }} />
           }
         </Card.Section>
       </Card>
