@@ -2,8 +2,6 @@ import { useSearchParams } from 'react-router-dom';
 
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from '@src/data/course-list-search/constants';
 import { renderHook, act, waitFor } from '@src/setupTest';
-import { mockCourseListSearchResponse } from '@src/__mocks__';
-import type { CourseListSearchResponse } from '@src/data/course-list-search/types';
 import { useSearch } from '../useSearch';
 
 jest.mock('react-router-dom', () => ({
@@ -29,16 +27,24 @@ describe('useSearch', () => {
   });
 
   it('should initialize with empty search state', () => {
+    const [searchParams, setSearchParams] = withSearchQuery(null);
     const { result } = renderHook(() => useSearch({
-      fetchData: mockFetchData, courseData: undefined, isFetching: false,
+      fetchData: mockFetchData,
+      isFetching: false,
+      searchParams,
+      setSearchParams,
     }));
 
     expect(result.current.searchString).toBe('');
   });
 
   it('should handle search without updating URL', () => {
+    const [searchParams, setSearchParams] = withSearchQuery(null);
     const { result } = renderHook(() => useSearch({
-      fetchData: mockFetchData, courseData: undefined, isFetching: false,
+      fetchData: mockFetchData,
+      isFetching: false,
+      searchParams,
+      setSearchParams,
     }));
 
     act(() => {
@@ -60,8 +66,12 @@ describe('useSearch', () => {
   it('should remove search_query from URL if it exists when searching', () => {
     (useSearchParams as jest.Mock).mockReturnValue(withSearchQuery('old-query'));
 
+    const [searchParams, setSearchParams] = withSearchQuery(null);
     const { result } = renderHook(() => useSearch({
-      fetchData: mockFetchData, courseData: undefined, isFetching: false,
+      fetchData: mockFetchData,
+      isFetching: false,
+      searchParams,
+      setSearchParams,
     }));
 
     act(() => {
@@ -78,13 +88,15 @@ describe('useSearch', () => {
     });
   });
 
-  it('initializes search from URL query when data is available', async () => {
+  it('initializes search from URL query', async () => {
     (useSearchParams as jest.Mock).mockReturnValue(withSearchQuery('python'));
 
+    const [searchParams, setSearchParams] = withSearchQuery('python');
     const { result } = renderHook(() => useSearch({
       fetchData: mockFetchData,
-      courseData: mockCourseListSearchResponse as unknown as CourseListSearchResponse,
       isFetching: false,
+      searchParams,
+      setSearchParams,
     }));
 
     await waitFor(() => {
@@ -102,22 +114,12 @@ describe('useSearch', () => {
   it('does not initialize search from URL while data is fetching', () => {
     (useSearchParams as jest.Mock).mockReturnValue(withSearchQuery('python'));
 
+    const [searchParams, setSearchParams] = withSearchQuery('python');
     renderHook(() => useSearch({
       fetchData: mockFetchData,
-      courseData: mockCourseListSearchResponse as unknown as CourseListSearchResponse,
       isFetching: true,
-    }));
-
-    expect(mockFetchData).not.toHaveBeenCalled();
-  });
-
-  it('does not initialize search from URL when course data is missing', () => {
-    (useSearchParams as jest.Mock).mockReturnValue(withSearchQuery('python'));
-
-    renderHook(() => useSearch({
-      fetchData: mockFetchData,
-      courseData: undefined,
-      isFetching: false,
+      searchParams,
+      setSearchParams,
     }));
 
     expect(mockFetchData).not.toHaveBeenCalled();

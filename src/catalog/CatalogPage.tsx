@@ -3,6 +3,7 @@ import { Container, Alert } from '@openedx/paragon';
 import { ErrorPage } from '@edx/frontend-platform/react';
 import { getConfig } from '@edx/frontend-platform';
 import { useIntl } from '@edx/frontend-platform/i18n';
+import { useSearchParams } from 'react-router-dom';
 
 import { DEFAULT_PAGE_SIZE } from '@src/data/course-list-search/constants';
 import { useCourseListSearch } from '@src/data/course-list-search/hooks';
@@ -17,23 +18,29 @@ import { transformAggregationsToFilterChoices } from './utils';
 
 const CatalogPage = () => {
   const intl = useIntl();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search_query') || '';
   const {
     data: courseData,
     isLoading,
     isError,
     fetchData,
     isFetching,
-  } = useCourseListSearch();
+  } = useCourseListSearch({ searchString: searchQuery });
 
   const {
     pageIndex,
     filterState,
     searchString,
+    hasInitializedFromUrl,
+    urlSearchQuery,
     previousCourseData,
     handleSearch,
     handleFetchData,
     resetFilterProgress,
-  } = useCatalog({ fetchData, courseData, isFetching });
+  } = useCatalog({
+    fetchData, courseData, isFetching, searchParams, setSearchParams,
+  });
 
   const { setSearchInput } = useDebouncedSearchInput({
     searchString,
@@ -66,7 +73,7 @@ const CatalogPage = () => {
     [displayData?.aggs, intl],
   );
 
-  if (isLoading) {
+  if (isLoading || (!hasInitializedFromUrl && urlSearchQuery)) {
     return (
       <Loading />
     );
@@ -97,7 +104,11 @@ const CatalogPage = () => {
         <CourseCatalogIntroSlot searchString={searchString} courseDataResultsLength={courseData?.results?.length} />
         {hasCourses ? (
           <>
-            <CourseCatalogSearchFieldSlot setSearchInput={setSearchInput} handleSearch={handleSearch} />
+            <CourseCatalogSearchFieldSlot
+              setSearchInput={setSearchInput}
+              handleSearch={handleSearch}
+              initialSearchValue={searchString}
+            />
             <CourseCatalogDataTableSlot
               displayData={displayData}
               totalCourses={totalCourses}

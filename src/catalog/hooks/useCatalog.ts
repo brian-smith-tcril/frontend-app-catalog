@@ -25,11 +25,17 @@ export const useCatalog = ({
   fetchData,
   courseData,
   isFetching,
+  searchParams,
+  setSearchParams,
 }: UseCatalogProps) => {
   const {
+    hasInitializedFromUrl,
+    urlSearchQuery,
     searchString,
     handleSearch,
-  } = useSearch({ fetchData, courseData, isFetching });
+  } = useSearch({
+    fetchData, isFetching, searchParams, setSearchParams,
+  });
 
   const { filterState, resetFilterProgress, handleFilterChange } = useFilter();
 
@@ -58,6 +64,8 @@ export const useCatalog = ({
     pageIndex,
     filterState,
     searchString,
+    hasInitializedFromUrl,
+    urlSearchQuery,
     previousCourseData,
     handleSearch,
     handleFetchData,
