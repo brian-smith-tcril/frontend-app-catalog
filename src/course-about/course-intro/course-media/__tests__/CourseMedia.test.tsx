@@ -1,15 +1,15 @@
-import { getConfig } from '@edx/frontend-platform';
-// Import fireEvent directly for simulating browser events that userEvent cannot handle
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { getSiteConfig, IntlProvider } from '@openedx/frontend-base';
 
 import noCourseImg from '@src/assets/images/no-course-image.svg';
-
-import {
-  userEvent, render, screen, within,
-} from '@src/setupTest';
 import { mockCourseAboutResponse } from '@src/__mocks__';
 import CourseMedia from '../CourseMedia';
 import messages from '../messages';
+
+const renderCourseMedia = (props: React.ComponentProps<typeof CourseMedia>) => render(
+  <IntlProvider locale="en"><CourseMedia {...props} /></IntlProvider>,
+);
 
 describe('CourseMedia', () => {
   const mockCourseData = {
@@ -22,15 +22,15 @@ describe('CourseMedia', () => {
   };
 
   it('renders course image with correct attributes', () => {
-    render(<CourseMedia {...defaultProps} />);
+    renderCourseMedia(defaultProps);
 
     const image = screen.getByAltText(mockCourseData.name);
-    expect(image).toHaveAttribute('src', `${getConfig().LMS_BASE_URL}${mockCourseAboutResponse.media.courseImage.uri}`);
+    expect(image).toHaveAttribute('src', `${getSiteConfig().lmsBaseUrl}${mockCourseAboutResponse.media.courseImage.uri}`);
     expect(image).toHaveClass('course-media-image');
   });
 
   it('renders video thumbnail when video is available', () => {
-    render(<CourseMedia {...defaultProps} />);
+    renderCourseMedia(defaultProps);
 
     const videoButton = screen.getByRole('button', {
       name: messages.playCourseIntroductionVideo.defaultMessage,
@@ -47,7 +47,7 @@ describe('CourseMedia', () => {
       },
     };
 
-    render(<CourseMedia courseAboutData={courseDataWithoutVideo} />);
+    renderCourseMedia({ courseAboutData: courseDataWithoutVideo });
 
     expect(screen.getByAltText(mockCourseData.name)).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
@@ -55,7 +55,7 @@ describe('CourseMedia', () => {
 
   it('opens video modal when clicking video thumbnail', async () => {
     const user = userEvent.setup();
-    render(<CourseMedia {...defaultProps} />);
+    renderCourseMedia(defaultProps);
 
     const videoButton = screen.getByRole('button', {
       name: messages.playCourseIntroductionVideo.defaultMessage,
@@ -67,7 +67,7 @@ describe('CourseMedia', () => {
   });
 
   it('uses placeholder image when image fails to load', () => {
-    render(<CourseMedia {...defaultProps} />);
+    renderCourseMedia(defaultProps);
 
     const image = screen.getByAltText(mockCourseData.name);
     fireEvent.error(image);
@@ -86,14 +86,14 @@ describe('CourseMedia', () => {
       },
     };
 
-    render(<CourseMedia courseAboutData={courseDataWithoutImage} />);
+    renderCourseMedia({ courseAboutData: courseDataWithoutImage });
 
     const image = screen.getByAltText(mockCourseData.name);
     expect(image).toHaveAttribute('src', noCourseImg);
   });
 
   it('renders play icon when video is available', () => {
-    render(<CourseMedia {...defaultProps} />);
+    renderCourseMedia(defaultProps);
 
     const videoButton = screen.getByRole('button', {
       name: messages.playCourseIntroductionVideo.defaultMessage,
@@ -104,9 +104,9 @@ describe('CourseMedia', () => {
   });
 
   it('constructs correct image URL with LMS base URL', () => {
-    render(<CourseMedia {...defaultProps} />);
+    renderCourseMedia(defaultProps);
 
     const image = screen.getByAltText(mockCourseData.name);
-    expect(image).toHaveAttribute('src', `${getConfig().LMS_BASE_URL}${mockCourseAboutResponse.media.courseImage.uri}`);
+    expect(image).toHaveAttribute('src', `${getSiteConfig().lmsBaseUrl}${mockCourseAboutResponse.media.courseImage.uri}`);
   });
 });

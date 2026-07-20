@@ -1,25 +1,25 @@
-import { getAuthenticatedUser } from '@edx/frontend-platform/auth';
-import { getConfig } from '@edx/frontend-platform';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { getAuthenticatedUser, getSiteConfig, IntlProvider } from '@openedx/frontend-base';
 
-import {
-  render, screen, waitFor, userEvent,
-} from '@src/setupTest';
 import { mockCourseAboutResponse } from '@src/__mocks__';
 import { useEnrollment } from '@src/course-about/data/hooks';
 import { CourseIntro } from './CourseIntro';
 import messages from './messages';
 
-jest.mock('@edx/frontend-platform/auth', () => ({
+jest.mock('@openedx/frontend-base', () => ({
+  ...jest.requireActual('@openedx/frontend-base'),
   getAuthenticatedUser: jest.fn(),
-}));
-
-jest.mock('@edx/frontend-platform/logging', () => ({
   logError: jest.fn(),
 }));
 
 jest.mock('@src/course-about/data/hooks', () => ({
   useEnrollment: jest.fn(),
 }));
+
+const renderCourseIntro = (props: React.ComponentProps<typeof CourseIntro>) => render(
+  <IntlProvider locale="en"><CourseIntro {...props} /></IntlProvider>,
+);
 
 describe('CourseIntro', () => {
   const mockEnrollAndRedirect = jest.fn();
@@ -31,7 +31,7 @@ describe('CourseIntro', () => {
   });
 
   it('renders course information correctly', () => {
-    render(<CourseIntro courseAboutData={mockCourseAboutResponse} />);
+    renderCourseIntro({ courseAboutData: mockCourseAboutResponse });
 
     expect(screen.getByText(mockCourseAboutResponse.name)).toBeInTheDocument();
     expect(screen.getByText(mockCourseAboutResponse.org)).toBeInTheDocument();
@@ -39,7 +39,7 @@ describe('CourseIntro', () => {
   });
 
   it('renders enrollment button for eligible users', async () => {
-    render(<CourseIntro courseAboutData={mockCourseAboutResponse} />);
+    renderCourseIntro({ courseAboutData: mockCourseAboutResponse });
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: messages.enrollNowBtn.defaultMessage })).toBeInTheDocument();
@@ -48,7 +48,7 @@ describe('CourseIntro', () => {
 
   it('handles enrollment action correctly', async () => {
     mockEnrollAndRedirect.mockResolvedValueOnce(undefined);
-    render(<CourseIntro courseAboutData={mockCourseAboutResponse} />);
+    renderCourseIntro({ courseAboutData: mockCourseAboutResponse });
 
     const enrollButton = await screen.findByRole('button', { name: messages.enrollNowBtn.defaultMessage });
     userEvent.click(enrollButton);
@@ -56,7 +56,7 @@ describe('CourseIntro', () => {
     await waitFor(() => {
       expect(mockEnrollAndRedirect).toHaveBeenCalledWith(
         mockCourseAboutResponse.id,
-        `${getConfig().LMS_BASE_URL}/dashboard`,
+        `${getSiteConfig().lmsBaseUrl}/dashboard`,
       );
     });
   });
@@ -68,7 +68,7 @@ describe('CourseIntro', () => {
       enrollment: { isActive: true },
     };
 
-    render(<CourseIntro courseAboutData={enrolledCourseData} />);
+    renderCourseIntro({ courseAboutData: enrolledCourseData });
 
     await waitFor(() => {
       expect(screen.getByText(messages.statusMessageEnrolled.defaultMessage)).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe('CourseIntro', () => {
     const mockUser = { username: 'testuser' };
     (getAuthenticatedUser as jest.Mock).mockReturnValue(mockUser);
 
-    render(<CourseIntro courseAboutData={mockCourseAboutResponse} />);
+    renderCourseIntro({ courseAboutData: mockCourseAboutResponse });
 
     await waitFor(() => {
       expect(screen.getByRole('button', {

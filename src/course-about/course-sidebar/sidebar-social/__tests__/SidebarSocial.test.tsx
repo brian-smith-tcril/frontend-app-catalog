@@ -1,8 +1,8 @@
-import { getConfig } from '@edx/frontend-platform';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { getAppConfig, getSiteConfig, IntlProvider } from '@openedx/frontend-base';
 
-import {
-  render, screen, waitFor, userEvent,
-} from '@src/setupTest';
+import { appId } from '@src/constants';
 import { mockCourseAboutResponse } from '@src/__mocks__';
 import SidebarSocial from '../SidebarSocial';
 import messages from '../messages';
@@ -18,12 +18,9 @@ Object.defineProperty(window, 'location', {
   writable: true,
 });
 
-jest.mock('@edx/frontend-platform', () => ({
-  getConfig: jest.fn(() => ({
-    SITE_NAME: process.env.SITE_NAME,
-    COURSE_ABOUT_TWITTER_ACCOUNT: process.env.COURSE_ABOUT_TWITTER_ACCOUNT,
-  })),
-}));
+const renderSidebarSocial = (props: React.ComponentProps<typeof SidebarSocial>) => render(
+  <IntlProvider locale="en"><SidebarSocial {...props} /></IntlProvider>,
+);
 
 describe('SidebarSocial', () => {
   const defaultProps = {
@@ -38,7 +35,7 @@ describe('SidebarSocial', () => {
   });
 
   it('should render social sharing options', async () => {
-    render(<SidebarSocial {...defaultProps} />);
+    renderSidebarSocial(defaultProps);
 
     await waitFor(() => {
       expect(screen.getByLabelText(
@@ -48,7 +45,7 @@ describe('SidebarSocial', () => {
   });
 
   it('should display tooltip on hover', async () => {
-    render(<SidebarSocial {...defaultProps} />);
+    renderSidebarSocial(defaultProps);
 
     const container = screen.getByLabelText(messages.socialSharingOptionsAriaLabel.defaultMessage);
     expect(container).toBeInTheDocument();
@@ -61,7 +58,7 @@ describe('SidebarSocial', () => {
   });
 
   it('should render Twitter sharing link', async () => {
-    render(<SidebarSocial {...defaultProps} />);
+    renderSidebarSocial(defaultProps);
 
     await waitFor(() => {
       const twitterLink = screen.getByText(messages.socialSharingTwitter.defaultMessage);
@@ -72,7 +69,7 @@ describe('SidebarSocial', () => {
   });
 
   it('should render Facebook sharing link', async () => {
-    render(<SidebarSocial {...defaultProps} />);
+    renderSidebarSocial(defaultProps);
 
     await waitFor(() => {
       const facebookLink = screen.getByText(messages.socialSharingFacebook.defaultMessage);
@@ -83,7 +80,7 @@ describe('SidebarSocial', () => {
   });
 
   it('should render Email sharing link', async () => {
-    render(<SidebarSocial {...defaultProps} />);
+    renderSidebarSocial(defaultProps);
 
     await waitFor(() => {
       const emailLink = screen.getByText(messages.socialSharingEmail.defaultMessage);
@@ -99,7 +96,7 @@ describe('SidebarSocial', () => {
       name: 'Test Course',
     };
 
-    render(<SidebarSocial courseAboutData={courseData} />);
+    renderSidebarSocial({ courseAboutData: courseData });
 
     await waitFor(() => {
       const twitterLink = screen.getByText(messages.socialSharingTwitter.defaultMessage);
@@ -108,7 +105,7 @@ describe('SidebarSocial', () => {
       expect(href).toContain('twitter.com/intent/tweet');
       expect(href).toContain(encodeURIComponent(courseData.displayNumberWithDefault));
       expect(href).toContain(encodeURIComponent(courseData.name));
-      expect(href).toContain(encodeURIComponent(getConfig().COURSE_ABOUT_TWITTER_ACCOUNT));
+      expect(href).toContain(encodeURIComponent(getAppConfig(appId).COURSE_ABOUT_TWITTER_ACCOUNT as string));
       expect(href).toContain(encodeURIComponent(window.location.href));
     });
   });
@@ -120,7 +117,7 @@ describe('SidebarSocial', () => {
       name: 'Advanced Mathematics',
     };
 
-    render(<SidebarSocial courseAboutData={courseData} />);
+    renderSidebarSocial({ courseAboutData: courseData });
 
     await waitFor(() => {
       const emailLink = screen.getByText(messages.socialSharingEmail.defaultMessage);
@@ -129,13 +126,13 @@ describe('SidebarSocial', () => {
       expect(href).toContain('mailto:');
       expect(href).toContain(encodeURIComponent(courseData.displayNumberWithDefault));
       expect(href).toContain(encodeURIComponent(courseData.name));
-      expect(href).toContain(encodeURIComponent(getConfig().SITE_NAME));
+      expect(href).toContain(encodeURIComponent(getSiteConfig().siteName));
       expect(href).toContain(encodeURIComponent(window.location.href));
     });
   });
 
   it('should generate correct Facebook share URL', async () => {
-    render(<SidebarSocial {...defaultProps} />);
+    renderSidebarSocial(defaultProps);
 
     await waitFor(() => {
       const facebookLink = screen.getByText(messages.socialSharingFacebook.defaultMessage);
@@ -147,7 +144,7 @@ describe('SidebarSocial', () => {
   });
 
   it('should render all social sharing icons', async () => {
-    render(<SidebarSocial {...defaultProps} />);
+    renderSidebarSocial(defaultProps);
 
     await waitFor(() => {
       expect(screen.getByText(messages.socialSharingTwitter.defaultMessage)).toBeInTheDocument();

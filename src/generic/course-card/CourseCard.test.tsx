@@ -1,13 +1,29 @@
-import { getConfig } from '@edx/frontend-platform';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { getSiteConfig, IntlProvider } from '@openedx/frontend-base';
 
 import { mockCourseResponse } from '@src/__mocks__';
-import { render, screen, formatDateForTest } from '@src/setupTest';
+import { DATE_FORMAT_OPTIONS } from '@src/constants';
 import { CourseCard } from '.';
 
 import messages from './messages';
 
+jest.mock('@openedx/frontend-base', () => ({
+  ...jest.requireActual('@openedx/frontend-base'),
+  getUrlByRouteRole: jest.fn(() => '/courses/:courseId/about'),
+}));
+
+const formatDateForTest = (dateString: string) => new Intl.DateTimeFormat(
+  'en-US',
+  DATE_FORMAT_OPTIONS,
+).format(new Date(dateString));
+
+const renderCourseCard = (ui: React.ReactElement) => render(
+  <IntlProvider locale="en"><MemoryRouter>{ui}</MemoryRouter></IntlProvider>,
+);
+
 describe('CourseCard', () => {
-  const renderComponent = (course = mockCourseResponse) => render(
+  const renderComponent = (course = mockCourseResponse) => renderCourseCard(
     <CourseCard
       courseId={course.id}
       courseOrg={course.data.org}
@@ -76,7 +92,7 @@ describe('CourseCard', () => {
     renderComponent();
 
     const image = screen.getByAltText(`${mockCourseResponse.data.content.displayName} ${mockCourseResponse.data.number}`);
-    expect(image).toHaveAttribute('src', `${getConfig().LMS_BASE_URL}${mockCourseResponse.data.imageUrl}`);
+    expect(image).toHaveAttribute('src', `${getSiteConfig().lmsBaseUrl}${mockCourseResponse.data.imageUrl}`);
   });
 
   it('formats the link destination correctly', () => {
@@ -122,9 +138,7 @@ describe('CourseCard', () => {
   });
 
   describe('when isLoading is true', () => {
-    const renderLoadingComponent = () => render(
-      <CourseCard isLoading />,
-    );
+    const renderLoadingComponent = () => renderCourseCard(<CourseCard isLoading />);
 
     it('renders skeleton elements when loading', () => {
       renderLoadingComponent();

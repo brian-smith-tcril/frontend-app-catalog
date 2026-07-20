@@ -1,10 +1,27 @@
-import {
-  render, screen, within, formatDateForTest,
-} from '@src/setupTest';
+import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
+import { IntlProvider } from '@openedx/frontend-base';
+
 import { mockCourseAboutResponse } from '@src/__mocks__';
-import { ROUTES } from '@src/routes';
+import { DATE_FORMAT_OPTIONS } from '@src/constants';
 import SidebarDetails from '../SidebarDetails';
 import messages from '../messages';
+
+const COURSE_ABOUT_URL_PATTERN = '/courses/:courseId/about';
+
+jest.mock('@openedx/frontend-base', () => ({
+  ...jest.requireActual('@openedx/frontend-base'),
+  getUrlByRouteRole: jest.fn(() => COURSE_ABOUT_URL_PATTERN),
+}));
+
+const formatDateForTest = (dateString: string) => new Intl.DateTimeFormat(
+  'en-US',
+  DATE_FORMAT_OPTIONS,
+).format(new Date(dateString));
+
+const renderSidebarDetails = (props: React.ComponentProps<typeof SidebarDetails>) => render(
+  <IntlProvider locale="en"><MemoryRouter><SidebarDetails {...props} /></MemoryRouter></IntlProvider>,
+);
 
 describe('SidebarDetails', () => {
   const createCourseData = (overrides = {}) => ({
@@ -15,7 +32,7 @@ describe('SidebarDetails', () => {
   describe('Course number', () => {
     it('renders when provided', () => {
       const courseData = createCourseData({ displayNumberWithDefault: 'CS101' });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.courseNumber.defaultMessage)).toBeInTheDocument();
       expect(screen.getByText('CS101')).toBeInTheDocument();
@@ -28,7 +45,7 @@ describe('SidebarDetails', () => {
         start: '2024-01-15T00:00:00Z',
         startDateIsStillDefault: false,
       });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.classesStart.defaultMessage)).toBeInTheDocument();
       expect(screen.getByText(formatDateForTest('2024-01-15T00:00:00Z'))).toBeInTheDocument();
@@ -39,7 +56,7 @@ describe('SidebarDetails', () => {
         start: '2024-01-15T00:00:00Z',
         startDateIsStillDefault: true,
       });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.queryByText(messages.classesStart.defaultMessage)).not.toBeInTheDocument();
     });
@@ -50,7 +67,7 @@ describe('SidebarDetails', () => {
         advertisedStart: '2024-02-01T00:00:00Z',
         startDateIsStillDefault: false,
       });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.classesStart.defaultMessage)).toBeInTheDocument();
       expect(screen.getByText(formatDateForTest('2024-02-01T00:00:00Z'))).toBeInTheDocument();
@@ -60,7 +77,7 @@ describe('SidebarDetails', () => {
   describe('End date', () => {
     it('renders when provided', () => {
       const courseData = createCourseData({ end: '2024-06-15T00:00:00Z' });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.classesEnd.defaultMessage)).toBeInTheDocument();
       expect(screen.getByText(formatDateForTest('2024-06-15T00:00:00Z'))).toBeInTheDocument();
@@ -68,7 +85,7 @@ describe('SidebarDetails', () => {
 
     it('does not render when not provided', () => {
       const courseData = createCourseData({ end: null });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.queryByText(messages.classesEnd.defaultMessage)).not.toBeInTheDocument();
     });
@@ -77,7 +94,7 @@ describe('SidebarDetails', () => {
   describe('Effort', () => {
     it('renders when provided', () => {
       const courseData = createCourseData({ effort: '5-10 hours per week' });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.estimatedEffort.defaultMessage)).toBeInTheDocument();
       expect(screen.getByText('5-10 hours per week')).toBeInTheDocument();
@@ -85,7 +102,7 @@ describe('SidebarDetails', () => {
 
     it('does not render when not provided', () => {
       const courseData = createCourseData({ effort: null });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.queryByText(messages.estimatedEffort.defaultMessage)).not.toBeInTheDocument();
     });
@@ -94,7 +111,7 @@ describe('SidebarDetails', () => {
   describe('Requirements', () => {
     it('renders when provided', () => {
       const courseData = createCourseData({ requirements: 'Basic programming knowledge' });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.requirements.defaultMessage)).toBeInTheDocument();
       expect(screen.getByText('Basic programming knowledge')).toBeInTheDocument();
@@ -102,7 +119,7 @@ describe('SidebarDetails', () => {
 
     it('does not render when not provided', () => {
       const courseData = createCourseData({ requirements: null });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.queryByText(messages.requirements.defaultMessage)).not.toBeInTheDocument();
     });
@@ -111,7 +128,7 @@ describe('SidebarDetails', () => {
   describe('Course price', () => {
     it('renders when provided', () => {
       const courseData = createCourseData({ coursePrice: '$99' });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.price.defaultMessage)).toBeInTheDocument();
       expect(screen.getByText('$99')).toBeInTheDocument();
@@ -119,7 +136,7 @@ describe('SidebarDetails', () => {
 
     it('does not render when not provided', () => {
       const courseData = createCourseData({ coursePrice: null });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.queryByText(messages.price.defaultMessage)).not.toBeInTheDocument();
     });
@@ -130,10 +147,11 @@ describe('SidebarDetails', () => {
       key: 'course-v1:TestX+CS100+2023',
       display: 'Introduction to Computer Science',
     };
+    const expectedHref = COURSE_ABOUT_URL_PATTERN.replace(':courseId', prerequisiteCourse.key);
 
     it('renders when preRequisiteCourses exist', () => {
       const courseData = createCourseData({ preRequisiteCourses: [prerequisiteCourse] });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.prerequisites.defaultMessage)).toBeInTheDocument();
 
@@ -143,16 +161,13 @@ describe('SidebarDetails', () => {
       expect(prerequisiteLinks).toHaveLength(2);
 
       prerequisiteLinks.forEach(link => {
-        expect(link).toHaveAttribute(
-          'href',
-          ROUTES.COURSE_ABOUT.replace(':courseId', prerequisiteCourse.key),
-        );
+        expect(link).toHaveAttribute('href', expectedHref);
       });
     });
 
     it('renders completion message', () => {
       const courseData = createCourseData({ preRequisiteCourses: [prerequisiteCourse] });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       const expectedText = messages
         .prerequisitesCompletion.defaultMessage.replace('{prerequisite}', prerequisiteCourse.display);
@@ -162,15 +177,12 @@ describe('SidebarDetails', () => {
       const prerequisiteLink = within(completionMessage).getByRole('link', {
         name: prerequisiteCourse.display,
       });
-      expect(prerequisiteLink).toHaveAttribute(
-        'href',
-        ROUTES.COURSE_ABOUT.replace(':courseId', prerequisiteCourse.key),
-      );
+      expect(prerequisiteLink).toHaveAttribute('href', expectedHref);
     });
 
     it('does not render when preRequisiteCourses is empty', () => {
       const courseData = createCourseData({ preRequisiteCourses: [] });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.queryByText(messages.prerequisites.defaultMessage)).not.toBeInTheDocument();
       expect(screen.queryByText(
@@ -188,17 +200,14 @@ describe('SidebarDetails', () => {
           },
         ],
       });
-      render(<SidebarDetails courseAboutData={courseData} />);
+      renderSidebarDetails({ courseAboutData: courseData });
 
       expect(screen.getByText(messages.prerequisites.defaultMessage)).toBeInTheDocument();
 
       const prerequisiteLinks = screen.getAllByRole('link');
       expect(prerequisiteLinks).toHaveLength(2);
 
-      expect(prerequisiteLinks[0]).toHaveAttribute(
-        'href',
-        ROUTES.COURSE_ABOUT.replace(':courseId', prerequisiteCourse.key),
-      );
+      expect(prerequisiteLinks[0]).toHaveAttribute('href', expectedHref);
       expect(prerequisiteLinks[0]).toHaveTextContent(prerequisiteCourse.display);
       expect(screen.queryByText('Data Structures')).not.toBeInTheDocument();
     });
@@ -218,7 +227,7 @@ describe('SidebarDetails', () => {
         display: 'Introduction to Computer Science',
       }],
     });
-    render(<SidebarDetails courseAboutData={courseData} />);
+    renderSidebarDetails({ courseAboutData: courseData });
 
     expect(screen.getByText(messages.courseNumber.defaultMessage)).toBeInTheDocument();
     expect(screen.getByText(courseData.displayNumberWithDefault)).toBeInTheDocument();
@@ -246,7 +255,7 @@ describe('SidebarDetails', () => {
       coursePrice: null,
       preRequisiteCourses: [],
     });
-    render(<SidebarDetails courseAboutData={courseData} />);
+    renderSidebarDetails({ courseAboutData: courseData });
 
     // Only course number should be visible
     expect(screen.getByText(messages.courseNumber.defaultMessage)).toBeInTheDocument();

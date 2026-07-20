@@ -1,53 +1,74 @@
-import { getConfig } from '@edx/frontend-platform';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
+import { getAppConfig, getSiteConfig, IntlProvider } from '@openedx/frontend-base';
 
-import {
-  render, screen, waitFor, userEvent, within, formatDateForTest,
-} from '@src/setupTest';
 import genericMessages from '@src/generic/video-modal/messages';
 import courseCardMessages from '@src/generic/course-card/messages';
 import { useCourseListSearch } from '@src/data/course-list-search/hooks';
 import { mockCourseListSearchResponse } from '@src/__mocks__';
+import { DATE_FORMAT_OPTIONS } from '@src/constants';
 import {
-  IFRAME_FEATURE_POLICY, DEFAULT_VIDEO_MODAL_HEIGHT,
+  DEFAULT_VIDEO_MODAL_HEIGHT, IFRAME_FEATURE_POLICY,
 } from '../constants';
 import HomePage from './HomePage';
+import homePageMessages from './messages';
 import messages from './components/home-banner/messages';
 
-jest.mock('@edx/frontend-platform', () => ({
-  getConfig: jest.fn(() => ({
-    SITE_NAME: process.env.SITE_NAME,
-    HOMEPAGE_PROMO_VIDEO_YOUTUBE_ID: process.env.HOMEPAGE_PROMO_VIDEO_YOUTUBE_ID,
-    ENABLE_COURSE_DISCOVERY: process.env.ENABLE_COURSE_DISCOVERY,
-  })),
-  ensureConfig: jest.fn(),
+const TEST_YOUTUBE_ID = 'test-youtube-id';
+
+jest.mock('@openedx/frontend-base', () => ({
+  ...jest.requireActual('@openedx/frontend-base'),
+  getAppConfig: jest.fn(),
+  getUrlByRouteRole: jest.fn(() => '/courses/:courseId/about'),
 }));
 
 jest.mock('@src/data/course-list-search/hooks', () => ({
   useCourseListSearch: jest.fn(),
 }));
 
+const mockedGetAppConfig = getAppConfig as jest.Mock;
 const mockCourseListSearch = useCourseListSearch as jest.Mock;
 
-describe('HomePage', () => {
+const formatDateForTest = (dateString: string) => new Intl.DateTimeFormat(
+  'en-US',
+  DATE_FORMAT_OPTIONS,
+).format(new Date(dateString));
+
+const renderHomePage = () => render(
+  <IntlProvider locale="en"><MemoryRouter><HomePage /></MemoryRouter></IntlProvider>,
+);
+
+beforeEach(() => {
+  mockedGetAppConfig.mockReturnValue({
+    ENABLE_COURSE_DISCOVERY: true,
+    HOMEPAGE_PROMO_VIDEO_YOUTUBE_ID: TEST_YOUTUBE_ID,
+    HOMEPAGE_COURSE_MAX: 9,
+    INFO_EMAIL: 'support@example.com',
+  });
   mockCourseListSearch.mockReturnValue({
     data: mockCourseListSearchResponse,
     isLoading: false,
     isError: false,
   });
+});
 
+describe('HomePage', () => {
   it('sets correct document title', async () => {
-    render(<HomePage />);
+    renderHomePage();
 
     await waitFor(() => {
-      expect(document.title).toBe(process.env.SITE_NAME);
+      expect(document.title).toBe(
+        homePageMessages.pageTitle.defaultMessage.replace('{siteName}', getSiteConfig().siteName),
+      );
     });
   });
 
   it('renders without crashing', () => {
-    render(<HomePage />);
+    renderHomePage();
 
     expect(screen.getByText(
-      messages.title.defaultMessage.replace('{siteName}', process.env.SITE_NAME ?? ''),
+      messages.title.defaultMessage.replace('{siteName}', getSiteConfig().siteName),
     )).toBeInTheDocument();
     expect(screen.getByText(messages.subtitle.defaultMessage)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: messages.videoButton.defaultMessage })).toBeInTheDocument();
@@ -56,7 +77,7 @@ describe('HomePage', () => {
   });
 
   it('opens video modal with YouTube iframe when video button is clicked', async () => {
-    render(<HomePage />);
+    renderHomePage();
     expect(screen.getByTestId('home-banner')).toBeInTheDocument();
 
     const videoBtn = screen.getByRole('button', { name: messages.videoButton.defaultMessage });
@@ -67,7 +88,7 @@ describe('HomePage', () => {
       expect(videoModal).toBeInTheDocument();
       const iframe = screen.getByTitle(genericMessages.videoIframeTitle.defaultMessage);
       expect(screen.getByLabelText(genericMessages.videoModalTitle.defaultMessage)).toBeInTheDocument();
-      expect(iframe).toHaveAttribute('src', `//www.youtube.com/embed/${process.env.HOMEPAGE_PROMO_VIDEO_YOUTUBE_ID}?showinfo=0`);
+      expect(iframe).toHaveAttribute('src', `//www.youtube.com/embed/${TEST_YOUTUBE_ID}?showinfo=0`);
       expect(iframe).toHaveAttribute('allow', IFRAME_FEATURE_POLICY);
       expect(iframe).toHaveAttribute('width', 'auto');
       expect(iframe).toHaveAttribute('height', `${DEFAULT_VIDEO_MODAL_HEIGHT}`);
@@ -77,7 +98,7 @@ describe('HomePage', () => {
   });
 
   it('should close video modal when Escape key is pressed and return focus to button', async () => {
-    render(<HomePage />);
+    renderHomePage();
 
     const videoBtn = screen.getByRole('button', { name: messages.videoButton.defaultMessage });
     userEvent.click(videoBtn);
@@ -97,11 +118,13 @@ describe('HomePage', () => {
   });
 
   it('should not pass enableCourseDiscovery to HomeBanner', () => {
-    (getConfig as jest.Mock).mockReturnValue({
-      ENABLE_COURSE_DISCOVERY: !process.env.ENABLE_COURSE_DISCOVERY,
+    mockedGetAppConfig.mockReturnValue({
+      ENABLE_COURSE_DISCOVERY: false,
+      HOMEPAGE_PROMO_VIDEO_YOUTUBE_ID: TEST_YOUTUBE_ID,
+      HOMEPAGE_COURSE_MAX: 9,
     });
 
-    render(<HomePage />);
+    renderHomePage();
     expect(screen.getByTestId('home-banner')).toBeInTheDocument();
     expect(screen.queryByRole('search')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(messages.searchPlaceholder.defaultMessage)).not.toBeInTheDocument();
@@ -109,7 +132,7 @@ describe('HomePage', () => {
 
   describe('CoursesList', () => {
     it('renders course cards with correct count', async () => {
-      render(<HomePage />);
+      renderHomePage();
 
       await waitFor(() => {
         expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
@@ -120,7 +143,7 @@ describe('HomePage', () => {
     });
 
     it('renders course cards with correct links', async () => {
-      render(<HomePage />);
+      renderHomePage();
 
       await waitFor(() => {
         expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
@@ -135,7 +158,7 @@ describe('HomePage', () => {
     });
 
     it('renders course images with correct URLs and alt text', async () => {
-      render(<HomePage />);
+      renderHomePage();
 
       await waitFor(() => {
         expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
@@ -148,12 +171,12 @@ describe('HomePage', () => {
         const cardContent = within(card);
 
         const courseImage = cardContent.getByAltText(`${course.data.content.displayName} ${course.data.number}`);
-        expect(courseImage).toHaveAttribute('src', `${getConfig().LMS_BASE_URL}${course.data.imageUrl}`);
+        expect(courseImage).toHaveAttribute('src', `${getSiteConfig().lmsBaseUrl}${course.data.imageUrl}`);
       });
     });
 
     it('renders course text content correctly', async () => {
-      render(<HomePage />);
+      renderHomePage();
 
       await waitFor(() => {
         expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
@@ -172,7 +195,7 @@ describe('HomePage', () => {
     });
 
     it('renders course start dates correctly with advertisedStart priority', async () => {
-      render(<HomePage />);
+      renderHomePage();
 
       await waitFor(() => {
         expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();
@@ -208,7 +231,7 @@ describe('HomePage', () => {
         isError: false,
       });
 
-      render(<HomePage />);
+      renderHomePage();
 
       await waitFor(() => {
         expect(screen.queryByTestId('spinner')).not.toBeInTheDocument();

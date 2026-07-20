@@ -1,11 +1,17 @@
-import { render, within, screen } from '../../setupTest';
-import { LoadingSpinner, Loading } from '.';
+import { render, screen, within } from '@testing-library/react';
+import { IntlProvider } from '@openedx/frontend-base';
+
+import { Loading, LoadingSpinner } from '.';
 
 import messages from './messages';
 
+const renderWithIntl = (ui: React.ReactElement) => render(
+  <IntlProvider locale="en">{ui}</IntlProvider>,
+);
+
 describe('LoadingSpinner', () => {
   it('renders with default size', () => {
-    const { container } = render(<LoadingSpinner />);
+    const { container } = renderWithIntl(<LoadingSpinner />);
     const spinner = container.querySelector('.spinner-border');
 
     expect(spinner).toBeInTheDocument();
@@ -13,7 +19,7 @@ describe('LoadingSpinner', () => {
   });
 
   it('renders with custom size', () => {
-    const { container } = render(<LoadingSpinner size="sm" />);
+    const { container } = renderWithIntl(<LoadingSpinner size="sm" />);
     const spinner = container.querySelector('.spinner-border');
 
     expect(spinner).toBeInTheDocument();
@@ -21,7 +27,7 @@ describe('LoadingSpinner', () => {
   });
 
   it('has correct accessibility attributes', () => {
-    render(<LoadingSpinner />);
+    renderWithIntl(<LoadingSpinner />);
     const spinner = screen.getByRole('status');
 
     expect(spinner).toBeInTheDocument();
@@ -31,7 +37,7 @@ describe('LoadingSpinner', () => {
 
 describe('Loading', () => {
   it('renders full page loading spinner with correct styling', () => {
-    const { container } = render(<Loading />);
+    const { container } = renderWithIntl(<Loading />);
     const wrapper = container.firstChild;
     const spinner = screen.getByRole('status');
 

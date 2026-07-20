@@ -1,23 +1,29 @@
 import { createElement, type ReactNode } from 'react';
-import { getConfig } from '@edx/frontend-platform';
-import { IntlProvider, useIntl } from '@edx/frontend-platform/i18n';
+import { renderHook } from '@testing-library/react';
+import { IntlProvider, useIntl } from '@openedx/frontend-base';
 
-import { renderHook } from '@src/setupTest';
 import { mockCourseAboutResponse } from '@src/__mocks__';
 import {
-  getTwitterShareUrl,
   getEmailShareUrl,
   getFacebookShareUrl,
   getSocialLinks,
+  getTwitterShareUrl,
 } from '../utils';
 import messages from '../messages';
 
-jest.mock('@edx/frontend-platform', () => ({
-  getConfig: jest.fn(() => ({
-    SITE_NAME: process.env.SITE_NAME,
-    COURSE_ABOUT_TWITTER_ACCOUNT: process.env.COURSE_ABOUT_TWITTER_ACCOUNT,
-  })),
+const TEST_SITE_NAME = 'localhost';
+const TEST_TWITTER_ACCOUNT = '@example';
+
+jest.mock('@openedx/frontend-base', () => ({
+  ...jest.requireActual('@openedx/frontend-base'),
+  getSiteConfig: jest.fn(),
+  getAppConfig: jest.fn(),
 }));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getSiteConfig, getAppConfig } = require('@openedx/frontend-base');
+const mockedGetSiteConfig = getSiteConfig as jest.Mock;
+const mockedGetAppConfig = getAppConfig as jest.Mock;
 
 const mockLocation = {
   href: 'https://example.com/course/test-course',
@@ -42,6 +48,8 @@ describe('Social Sharing Utils', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedGetSiteConfig.mockReturnValue({ siteName: TEST_SITE_NAME });
+    mockedGetAppConfig.mockReturnValue({ COURSE_ABOUT_TWITTER_ACCOUNT: TEST_TWITTER_ACCOUNT });
     formatMessageSpy = jest.spyOn(intl, 'formatMessage');
     window.location.href = mockLocation.href;
   });
@@ -58,7 +66,7 @@ describe('Social Sharing Utils', () => {
       expect(result).toContain('https://twitter.com/intent/tweet?text=');
       expect(result).toContain(encodeURIComponent(courseData.displayNumberWithDefault));
       expect(result).toContain(encodeURIComponent(courseData.name));
-      expect(result).toContain(encodeURIComponent(getConfig().COURSE_ABOUT_TWITTER_ACCOUNT));
+      expect(result).toContain(encodeURIComponent(TEST_TWITTER_ACCOUNT));
       expect(result).toContain(encodeURIComponent(mockLocation.href));
     });
 
@@ -74,7 +82,7 @@ describe('Social Sharing Utils', () => {
         {
           courseNumber: courseData.displayNumberWithDefault,
           courseName: courseData.name,
-          platformTwitter: getConfig().COURSE_ABOUT_TWITTER_ACCOUNT,
+          platformTwitter: TEST_TWITTER_ACCOUNT,
           url: window.location.href,
         },
       );
@@ -92,7 +100,7 @@ describe('Social Sharing Utils', () => {
 
       expect(result).toContain('mailto:?subject=');
       expect(result).toContain('&body=');
-      expect(result).toContain(encodeURIComponent(getConfig().SITE_NAME));
+      expect(result).toContain(encodeURIComponent(TEST_SITE_NAME));
       expect(result).toContain(encodeURIComponent(courseData.displayNumberWithDefault));
       expect(result).toContain(encodeURIComponent(courseData.name));
       expect(result).toContain(encodeURIComponent(mockLocation.href));
@@ -107,14 +115,14 @@ describe('Social Sharing Utils', () => {
 
       expect(formatMessageSpy).toHaveBeenCalledWith(
         messages.socialSharingEmailSubject,
-        { siteName: getConfig().SITE_NAME },
+        { siteName: TEST_SITE_NAME },
       );
       expect(formatMessageSpy).toHaveBeenCalledWith(
         messages.socialSharingEmailBody,
         {
           courseNumber: courseData.displayNumberWithDefault,
           courseName: courseData.name,
-          siteName: getConfig().SITE_NAME,
+          siteName: TEST_SITE_NAME,
           url: window.location.href,
         },
       );
@@ -133,14 +141,14 @@ describe('Social Sharing Utils', () => {
         messages.socialSharingTwitterText.defaultMessage
           .replace('{courseNumber}', courseData.displayNumberWithDefault)
           .replace('{courseName}', courseData.name)
-          .replace('{platformTwitter}', getConfig().COURSE_ABOUT_TWITTER_ACCOUNT)
+          .replace('{platformTwitter}', TEST_TWITTER_ACCOUNT)
           .replace('{url}', window.location.href),
       ));
       expect(emailUrl).toContain(encodeURIComponent(
         messages.socialSharingEmailBody.defaultMessage
           .replace('{courseNumber}', courseData.displayNumberWithDefault)
           .replace('{courseName}', courseData.name)
-          .replace('{siteName}', getConfig().SITE_NAME)
+          .replace('{siteName}', TEST_SITE_NAME)
           .replace('{url}', window.location.href),
       ));
     });
@@ -217,10 +225,8 @@ describe('Social Sharing Utils', () => {
     });
 
     it('handles missing config values', () => {
-      (getConfig as jest.Mock).mockReturnValue({
-        SITE_NAME: undefined,
-        COURSE_ABOUT_TWITTER_ACCOUNT: undefined,
-      });
+      mockedGetSiteConfig.mockReturnValue({ siteName: undefined });
+      mockedGetAppConfig.mockReturnValue({ COURSE_ABOUT_TWITTER_ACCOUNT: undefined });
 
       const courseData = createCourseData();
       const twitterUrl = getTwitterShareUrl(courseData, intl);

@@ -1,8 +1,15 @@
-import { render, userEvent, screen } from '@src/setupTest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { IntlProvider } from '@openedx/frontend-base';
+
 import messages from '../../messages';
 import { EnrollmentButton } from '../EnrollmentButton';
 
 const user = userEvent.setup();
+
+const renderEnrollmentButton = (props: React.ComponentProps<typeof EnrollmentButton>) => render(
+  <IntlProvider locale="en"><EnrollmentButton {...props} /></IntlProvider>,
+);
 
 describe('EnrollmentButton', () => {
   const defaultProps = {
@@ -16,26 +23,26 @@ describe('EnrollmentButton', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('renders with default enrollment text', () => {
-    render(<EnrollmentButton {...defaultProps} />);
+    renderEnrollmentButton(defaultProps);
     expect(screen.getByText(messages.enrollNowBtn.defaultMessage)).toBeInTheDocument();
   });
 
   it('shows pending text when enrollment is pending', () => {
-    render(<EnrollmentButton {...defaultProps} isEnrollmentPending />);
+    renderEnrollmentButton({ ...defaultProps, isEnrollmentPending: true });
     expect(screen.getByRole('button', {
       name: messages.enrollNowBtnPending.defaultMessage,
     })).toBeInTheDocument();
   });
 
   it('calls onEnroll when clicked in default mode', async () => {
-    render(<EnrollmentButton {...defaultProps} />);
+    renderEnrollmentButton(defaultProps);
 
     await user.click(screen.getByText(messages.enrollNowBtn.defaultMessage));
     expect(defaultProps.onEnroll).toHaveBeenCalledTimes(1);
   });
 
   it('calls onEcommerceCheckout when clicked in ecommerce mode', async () => {
-    render(<EnrollmentButton {...defaultProps} ecommerceCheckout />);
+    renderEnrollmentButton({ ...defaultProps, ecommerceCheckout: true });
 
     await user.click(screen.getByText(messages.enrollNowBtn.defaultMessage));
     expect(defaultProps.onEcommerceCheckout).toHaveBeenCalledTimes(1);
@@ -43,7 +50,7 @@ describe('EnrollmentButton', () => {
   });
 
   it('renders button with correct attributes and classes', () => {
-    render(<EnrollmentButton {...defaultProps} />);
+    renderEnrollmentButton(defaultProps);
 
     const enrollNowBtn = screen.getByRole('button', {
       name: messages.enrollNowBtn.defaultMessage,
@@ -57,7 +64,7 @@ describe('EnrollmentButton', () => {
   });
 
   it('renders button with correct attributes and classes with singlePaidMode', () => {
-    render(<EnrollmentButton {...defaultProps} singlePaidMode={{ mode: 'paid' }} />);
+    renderEnrollmentButton({ ...defaultProps, singlePaidMode: { mode: 'paid' } });
 
     const enrollNowBtn = screen.getByRole('button', {
       name: messages.enrollNowBtn.defaultMessage,
@@ -71,7 +78,7 @@ describe('EnrollmentButton', () => {
   });
 
   it('handles keyboard interaction for accessibility', async () => {
-    render(<EnrollmentButton {...defaultProps} />);
+    renderEnrollmentButton(defaultProps);
 
     const enrollNowBtn = screen.getByRole('button', {
       name: messages.enrollNowBtn.defaultMessage,
