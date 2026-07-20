@@ -1,62 +1,48 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  act, render as rtlRender, screen, waitFor, within,
-} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
-import {
-  getAppConfig, getAuthenticatedHttpClient, getSiteConfig, IntlProvider,
-} from '@openedx/frontend-base';
+import { getConfig } from '@edx/frontend-platform';
+import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 
+import {
+  render, within, screen, waitFor, userEvent, act,
+} from '../setupTest';
 import { useCourseListSearch } from '../data/course-list-search/hooks';
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from '../data/course-list-search/constants';
 import { mockCourseListSearchResponse } from '../__mocks__';
 import CatalogPage from './CatalogPage';
 import messages from './messages';
 
-const TEST_INFO_EMAIL = 'support@example.com';
-
 jest.mock('../data/course-list-search/hooks', () => ({
   useCourseListSearch: jest.fn(),
 }));
 
-jest.mock('@openedx/frontend-base', () => ({
-  ...jest.requireActual('@openedx/frontend-base'),
+jest.mock('@edx/frontend-platform', () => ({
+  getConfig: jest.fn(),
+  camelCaseObject: jest.fn(obj => obj),
+}));
+
+jest.mock('@edx/frontend-platform/react', () => ({
   ErrorPage: ({ message }: { message: string }) => (
     <div data-testid="error-page">{message}</div>
   ),
-  getAppConfig: jest.fn(),
+}));
+
+jest.mock('@edx/frontend-platform/auth', () => ({
   getAuthenticatedHttpClient: jest.fn(),
-  getUrlByRouteRole: jest.fn(() => '/courses/:courseId/about'),
 }));
 
 const mockUseCourseListSearch = useCourseListSearch as jest.Mock;
-const mockedGetAppConfig = getAppConfig as jest.Mock;
+const mockGetConfig = getConfig as jest.Mock;
 const mockGetAuthenticatedHttpClient = getAuthenticatedHttpClient as jest.Mock;
 
 const actualUseCourseListSearch = jest
   .requireActual('../data/course-list-search/hooks').useCourseListSearch;
 
-const render = (ui: React.ReactElement) => {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <IntlProvider locale="en">
-      <MemoryRouter>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-      </MemoryRouter>
-    </IntlProvider>
-  );
-  return rtlRender(ui, { wrapper: Wrapper });
-};
-
 describe('CatalogPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedGetAppConfig.mockReturnValue({
-      INFO_EMAIL: TEST_INFO_EMAIL,
-      ENABLE_COURSE_DISCOVERY: true,
+    mockGetConfig.mockReturnValue({
+      INFO_EMAIL: process.env.INFO_EMAIL,
+      ENABLE_COURSE_DISCOVERY: process.env.ENABLE_COURSE_DISCOVERY,
+      SITE_NAME: process.env.SITE_NAME,
     });
   });
 
@@ -72,9 +58,7 @@ describe('CatalogPage', () => {
     render(<CatalogPage />);
 
     await waitFor(() => {
-      expect(document.title).toBe(
-        messages.pageTitle.defaultMessage.replace('{siteName}', getSiteConfig().siteName),
-      );
+      expect(document.title).toBe(`${messages.pageTitle.defaultMessage} | ${getConfig().SITE_NAME}`);
     });
   });
 
@@ -107,7 +91,7 @@ describe('CatalogPage', () => {
 
     const errorPage = screen.getByTestId('error-page');
     expect(errorPage).toHaveTextContent(
-      messages.errorMessage.defaultMessage.replace('{supportEmail}', TEST_INFO_EMAIL),
+      messages.errorMessage.defaultMessage.replace('{supportEmail}', getConfig().INFO_EMAIL),
     );
   });
 
@@ -168,7 +152,7 @@ describe('CatalogPage', () => {
   });
 
   it('should render DataTable without filters and search field when course discovery is disabled', () => {
-    mockedGetAppConfig.mockReturnValue({
+    mockGetConfig.mockReturnValue({
       INFO_EMAIL: 'support@example.com',
       ENABLE_COURSE_DISCOVERY: false,
     });
@@ -1461,8 +1445,8 @@ describe('CatalogPage', () => {
     });
 
     it('should display default title when course discovery is disabled', () => {
-      mockedGetAppConfig.mockReturnValue({
-        INFO_EMAIL: TEST_INFO_EMAIL,
+      mockGetConfig.mockReturnValue({
+        INFO_EMAIL: process.env.INFO_EMAIL,
         ENABLE_COURSE_DISCOVERY: false,
       });
 
@@ -1493,16 +1477,16 @@ describe('CatalogPage search integration', () => {
 
     mockUseCourseListSearch.mockImplementation(params => actualUseCourseListSearch(params));
 
-    mockedGetAppConfig.mockReturnValue({
-      INFO_EMAIL: TEST_INFO_EMAIL,
-      ENABLE_COURSE_DISCOVERY: true,
+    mockGetConfig.mockReturnValue({
+      INFO_EMAIL: process.env.INFO_EMAIL,
+      ENABLE_COURSE_DISCOVERY: process.env.ENABLE_COURSE_DISCOVERY,
     });
   });
 
   afterEach(() => {
     mockGetAuthenticatedHttpClient.mockReset();
     mockUseCourseListSearch.mockReset();
-    mockedGetAppConfig.mockReset();
+    mockGetConfig.mockReset();
   });
 
   it('sends search_string to FormData when searching', async () => {
@@ -1533,9 +1517,9 @@ describe('CatalogPage search integration', () => {
 describe('Debounced search', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    mockedGetAppConfig.mockReturnValue({
-      INFO_EMAIL: TEST_INFO_EMAIL,
-      ENABLE_COURSE_DISCOVERY: true,
+    mockGetConfig.mockReturnValue({
+      INFO_EMAIL: process.env.INFO_EMAIL,
+      ENABLE_COURSE_DISCOVERY: process.env.ENABLE_COURSE_DISCOVERY,
     });
   });
 

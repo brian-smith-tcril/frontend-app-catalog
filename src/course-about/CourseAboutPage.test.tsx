@@ -1,33 +1,37 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useParams } from 'react-router';
+import { useLocation } from 'react-router-dom';
 import { useMediaQuery } from '@openedx/paragon';
-import {
-  getAuthenticatedUser, getSiteConfig, IntlProvider,
-} from '@openedx/frontend-base';
+import { getConfig } from '@edx/frontend-platform';
 
-import { mockCourseAboutResponse } from '@src/__mocks__';
-import { DATE_FORMAT_OPTIONS } from '@src/constants';
 import genericMessages from '../generic/video-modal/messages';
+import {
+  render, waitFor, screen, userEvent, within, formatDateForTest,
+} from '../setupTest';
+import { mockCourseAboutResponse } from '../__mocks__';
 import CourseAboutPage from './CourseAboutPage';
-import { useCourseAboutData, useEnrollment } from './data/hooks';
+import { fetchCourseAboutData } from './data/api';
 import messages from './course-intro/messages';
 import courseMediaMessages from './course-intro/course-media/messages';
 import sidebarDetailsMessages from './course-sidebar/sidebar-details/messages';
 import sidebarSocialMessages from './course-sidebar/sidebar-social/messages';
+import { ROUTES } from '../routes';
 import courseAboutMessages from './messages';
 
-const TEST_COURSE_ID = 'course-v1:TestX+Test101+2023';
+const mockGetAuthenticatedUser = jest.fn();
 
-jest.mock('@openedx/frontend-base', () => ({
-  ...jest.requireActual('@openedx/frontend-base'),
-  getAuthenticatedUser: jest.fn(),
-  getUrlByRouteRole: jest.fn(() => '/courses/:courseId/about'),
+jest.mock('@edx/frontend-platform/auth', () => ({
+  getAuthenticatedUser: () => mockGetAuthenticatedUser(),
 }));
 
-jest.mock('react-router', () => ({
-  ...jest.requireActual('react-router'),
-  useParams: jest.fn(),
+jest.mock('@edx/frontend-platform', () => ({
+  getConfig: jest.fn(),
+}));
+
+jest.mock('./data/api', () => ({
+  fetchCourseAboutData: jest.fn(),
+}));
+
+jest.mock('react-router-dom', () => ({
+  useLocation: jest.fn(),
 }));
 
 jest.mock('@openedx/paragon', () => ({
@@ -35,67 +39,45 @@ jest.mock('@openedx/paragon', () => ({
   useMediaQuery: jest.fn(),
 }));
 
-jest.mock('./data/hooks', () => ({
-  useCourseAboutData: jest.fn(),
-  useEnrollment: jest.fn(),
-}));
-
 const mockUseMediaQuery = useMediaQuery as jest.Mock;
-const mockedGetAuthenticatedUser = getAuthenticatedUser as jest.Mock;
-const mockUseParams = useParams as jest.Mock;
-const mockUseCourseAboutData = useCourseAboutData as jest.Mock;
-const mockUseEnrollment = useEnrollment as jest.Mock;
-
-const formatDateForTest = (dateString: string) => new Intl.DateTimeFormat(
-  'en-US',
-  DATE_FORMAT_OPTIONS,
-).format(new Date(dateString));
-
-const renderCourseAboutPage = () => render(
-  <IntlProvider locale="en"><MemoryRouter><CourseAboutPage /></MemoryRouter></IntlProvider>,
-);
+const mockGetConfig = getConfig as jest.Mock;
+const mockFetchCourseAboutData = fetchCourseAboutData as jest.Mock;
+const mockUseLocation = useLocation as jest.Mock;
 
 describe('CourseAboutPage Integration Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseParams.mockReturnValue({ courseId: TEST_COURSE_ID });
-    mockedGetAuthenticatedUser.mockReturnValue(null);
-    mockUseMediaQuery.mockReturnValue(false);
-    mockUseEnrollment.mockReturnValue(jest.fn());
-  });
-
-  const setCourseData = (courseData: any, overrides: Partial<{ isLoading: boolean, isError: boolean }> = {}) => {
-    mockUseCourseAboutData.mockReturnValue({
-      data: courseData,
-      isLoading: false,
-      isError: false,
-      ...overrides,
+    mockUseLocation.mockReturnValue({
+      pathname: ROUTES.COURSE_ABOUT.replace(':courseId', 'course-v1:TestX+Test101+2023'),
     });
-  };
+    mockGetAuthenticatedUser.mockReturnValue(null);
+    mockUseMediaQuery.mockReturnValue(false);
+    mockGetConfig.mockReturnValue({
+      LMS_BASE_URL: process.env.LMS_BASE_URL,
+      STUDIO_BASE_URL: process.env.STUDIO_BASE_URL,
+      SITE_NAME: process.env.SITE_NAME,
+    });
+  });
 
   it('sets correct document title', async () => {
-    setCourseData(mockCourseAboutResponse);
+    mockFetchCourseAboutData.mockReturnValue(mockCourseAboutResponse);
 
-    renderCourseAboutPage();
+    render(<CourseAboutPage />);
 
     await waitFor(() => {
-      expect(document.title).toBe(
-        courseAboutMessages.pageTitle.defaultMessage
-          .replace('{courseName}', mockCourseAboutResponse.name)
-          .replace('{siteName}', getSiteConfig().siteName),
-      );
+      expect(document.title).toBe(`${mockCourseAboutResponse.name} | ${getConfig().SITE_NAME}`);
     });
   });
 
-  it('should show loading state when data is being fetched', () => {
-    setCourseData(undefined, { isLoading: true });
-    renderCourseAboutPage();
+  it('should show loading state when data is being fetched', async () => {
+    mockFetchCourseAboutData.mockReturnValue(new Promise(() => {}));
+    render(<CourseAboutPage />);
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('should render course page with all components', async () => {
-    setCourseData(mockCourseAboutResponse);
-    renderCourseAboutPage();
+    mockFetchCourseAboutData.mockReturnValue(mockCourseAboutResponse);
+    render(<CourseAboutPage />);
 
     await waitFor(() => {
       expect(screen.getByText(mockCourseAboutResponse.name)).toBeInTheDocument();
@@ -118,9 +100,9 @@ describe('CourseAboutPage Integration Tests', () => {
       },
     };
 
-    setCourseData(courseWithVideo);
+    mockFetchCourseAboutData.mockReturnValue(courseWithVideo);
 
-    renderCourseAboutPage();
+    render(<CourseAboutPage />);
 
     await waitFor(() => {
       const videoButton = screen.getByLabelText(courseMediaMessages.playCourseIntroductionVideo.defaultMessage);
@@ -148,8 +130,9 @@ describe('CourseAboutPage Integration Tests', () => {
       },
     };
 
-    setCourseData(courseWithoutVideo);
-    renderCourseAboutPage();
+    mockFetchCourseAboutData.mockReturnValue(courseWithoutVideo);
+
+    render(<CourseAboutPage />);
 
     await waitFor(() => {
       expect(screen.queryByLabelText(
@@ -165,8 +148,9 @@ describe('CourseAboutPage Integration Tests', () => {
       canEnroll: true,
     };
 
-    setCourseData(courseData);
-    renderCourseAboutPage();
+    mockFetchCourseAboutData.mockReturnValue(courseData);
+
+    render(<CourseAboutPage />);
 
     await waitFor(() => {
       expect(screen.getByRole('button', {
@@ -176,7 +160,7 @@ describe('CourseAboutPage Integration Tests', () => {
   });
 
   it('should display enrolled status for enrolled user', async () => {
-    mockedGetAuthenticatedUser.mockReturnValue({ username: 'testuser' });
+    mockGetAuthenticatedUser.mockReturnValue({ username: 'testuser' });
 
     const courseData = {
       ...mockCourseAboutResponse,
@@ -184,8 +168,9 @@ describe('CourseAboutPage Integration Tests', () => {
       showCoursewareLink: true,
     };
 
-    setCourseData(courseData);
-    renderCourseAboutPage();
+    mockFetchCourseAboutData.mockReturnValue(courseData);
+
+    render(<CourseAboutPage />);
 
     await waitFor(() => {
       expect(screen.getByText(messages.statusMessageEnrolled.defaultMessage)).toBeInTheDocument();
@@ -199,8 +184,9 @@ describe('CourseAboutPage Integration Tests', () => {
       canEnroll: false,
     };
 
-    setCourseData(courseData);
-    renderCourseAboutPage();
+    mockFetchCourseAboutData.mockReturnValue(courseData);
+
+    render(<CourseAboutPage />);
 
     await waitFor(() => {
       expect(screen.getByText(messages.statusMessageFull.defaultMessage)).toBeInTheDocument();
@@ -218,8 +204,9 @@ describe('CourseAboutPage Integration Tests', () => {
           coursePrice: '$99',
         };
 
-        setCourseData(courseData);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(courseData);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -237,8 +224,9 @@ describe('CourseAboutPage Integration Tests', () => {
           start: '2024-03-15T00:00:00Z',
         };
 
-        setCourseData(courseData);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(courseData);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -252,8 +240,9 @@ describe('CourseAboutPage Integration Tests', () => {
           end: '2024-06-15T00:00:00Z',
         };
 
-        setCourseData(courseData);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(courseData);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -267,8 +256,9 @@ describe('CourseAboutPage Integration Tests', () => {
           effort: null,
         };
 
-        setCourseData(courseData);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(courseData);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -284,8 +274,9 @@ describe('CourseAboutPage Integration Tests', () => {
           requirements: null,
         };
 
-        setCourseData(courseData);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(courseData);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -298,8 +289,9 @@ describe('CourseAboutPage Integration Tests', () => {
 
     describe('Sidebar social', () => {
       it('should display social sharing options in sidebar', async () => {
-        setCourseData(mockCourseAboutResponse);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(mockCourseAboutResponse);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -323,8 +315,9 @@ describe('CourseAboutPage Integration Tests', () => {
           name: 'Test Course',
         };
 
-        setCourseData(courseData);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(courseData);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -339,8 +332,9 @@ describe('CourseAboutPage Integration Tests', () => {
       });
 
       it('should have correct Facebook share URL in sidebar', async () => {
-        setCourseData(mockCourseAboutResponse);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(mockCourseAboutResponse);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -359,8 +353,9 @@ describe('CourseAboutPage Integration Tests', () => {
           name: 'Advanced Mathematics',
         };
 
-        setCourseData(courseData);
-        renderCourseAboutPage();
+        mockFetchCourseAboutData.mockReturnValue(courseData);
+
+        render(<CourseAboutPage />);
 
         await waitFor(() => {
           const sidebar = screen.getByRole('complementary');
@@ -378,13 +373,13 @@ describe('CourseAboutPage Integration Tests', () => {
 
   describe('Responsive layout', () => {
     beforeEach(() => {
-      setCourseData(mockCourseAboutResponse);
+      mockFetchCourseAboutData.mockReturnValue(mockCourseAboutResponse);
     });
 
     it('should render mobile layout for small screens', async () => {
       mockUseMediaQuery.mockReturnValue(true);
 
-      renderCourseAboutPage();
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         expect(screen.getByText(mockCourseAboutResponse.name)).toBeInTheDocument();
@@ -400,7 +395,7 @@ describe('CourseAboutPage Integration Tests', () => {
     it('should render desktop layout for large screens', async () => {
       mockUseMediaQuery.mockReturnValue(false);
 
-      renderCourseAboutPage();
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         expect(screen.getByText(mockCourseAboutResponse.name)).toBeInTheDocument();
@@ -416,7 +411,7 @@ describe('CourseAboutPage Integration Tests', () => {
     it('should apply correct CSS classes for mobile layout', async () => {
       mockUseMediaQuery.mockReturnValue(true);
 
-      renderCourseAboutPage();
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         const mediaWrapper = document.querySelector('.course-media-wrapper.text-center');
@@ -427,7 +422,7 @@ describe('CourseAboutPage Integration Tests', () => {
     it('should apply correct CSS classes for desktop layout', async () => {
       mockUseMediaQuery.mockReturnValue(false);
 
-      renderCourseAboutPage();
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         const mediaWrapper = document.querySelector('.course-media-wrapper.text-center');
@@ -447,8 +442,8 @@ describe('CourseAboutPage Integration Tests', () => {
         overview: `<p>${courseOverviewText}</p>`,
       };
 
-      setCourseData(courseData);
-      renderCourseAboutPage();
+      mockFetchCourseAboutData.mockReturnValue(courseData);
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         expect(screen.getByText(courseOverviewText)).toBeInTheDocument();
@@ -461,8 +456,8 @@ describe('CourseAboutPage Integration Tests', () => {
         overview: '',
       };
 
-      setCourseData(courseData);
-      renderCourseAboutPage();
+      mockFetchCourseAboutData.mockReturnValue(courseData);
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         expect(screen.queryByRole('link', {
@@ -477,12 +472,12 @@ describe('CourseAboutPage Integration Tests', () => {
         overview: '<img src="/static/images/test.jpg" alt="Test Image" />',
       };
 
-      setCourseData(courseData);
-      renderCourseAboutPage();
+      mockFetchCourseAboutData.mockReturnValue(courseData);
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         const img = screen.getByAltText('Test Image');
-        expect(img).toHaveAttribute('src', `${getSiteConfig().lmsBaseUrl}/static/images/test.jpg`);
+        expect(img).toHaveAttribute('src', `${getConfig().LMS_BASE_URL}/static/images/test.jpg`);
       });
     });
 
@@ -492,25 +487,25 @@ describe('CourseAboutPage Integration Tests', () => {
         overview: '<img src="/asset/test.jpg" alt="Test Asset" />',
       };
 
-      setCourseData(courseData);
-      renderCourseAboutPage();
+      mockFetchCourseAboutData.mockReturnValue(courseData);
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         const img = screen.getByAltText('Test Asset');
-        expect(img).toHaveAttribute('src', `${getSiteConfig().lmsBaseUrl}/asset/test.jpg`);
+        expect(img).toHaveAttribute('src', `${getConfig().LMS_BASE_URL}/asset/test.jpg`);
       });
     });
 
     it('should show Studio button for global staff user', async () => {
-      mockedGetAuthenticatedUser.mockReturnValue({ administrator: true });
+      mockGetAuthenticatedUser.mockReturnValue({ administrator: true });
 
       const courseData = {
         ...mockCourseAboutResponse,
         overview: '<p>Course overview content</p>',
       };
 
-      setCourseData(courseData);
-      renderCourseAboutPage();
+      mockFetchCourseAboutData.mockReturnValue(courseData);
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         const studioButton = screen.getByRole('link', {
@@ -519,21 +514,21 @@ describe('CourseAboutPage Integration Tests', () => {
         expect(studioButton).toBeInTheDocument();
         expect(studioButton).toHaveAttribute(
           'href',
-          expect.stringContaining(`${getSiteConfig().cmsBaseUrl}/settings/details/`),
+          expect.stringContaining(`${getConfig().STUDIO_BASE_URL}/settings/details/`),
         );
       });
     });
 
     it('should hide Studio button for non-staff user', async () => {
-      mockedGetAuthenticatedUser.mockReturnValue(null);
+      mockGetAuthenticatedUser.mockReturnValue(null);
 
       const courseData = {
         ...mockCourseAboutResponse,
         overview: '<p>Course overview content</p>',
       };
 
-      setCourseData(courseData);
-      renderCourseAboutPage();
+      mockFetchCourseAboutData.mockReturnValue(courseData);
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         expect(screen.queryByRole('link', {
@@ -543,15 +538,15 @@ describe('CourseAboutPage Integration Tests', () => {
     });
 
     it('should hide Studio button for authenticated user without administrator role', async () => {
-      mockedGetAuthenticatedUser.mockReturnValue({ username: 'testuser', administrator: false });
+      mockGetAuthenticatedUser.mockReturnValue({ username: 'testuser', administrator: false });
 
       const courseData = {
         ...mockCourseAboutResponse,
         overview: '<p>Course overview content</p>',
       };
 
-      setCourseData(courseData);
-      renderCourseAboutPage();
+      mockFetchCourseAboutData.mockReturnValue(courseData);
+      render(<CourseAboutPage />);
 
       await waitFor(() => {
         expect(screen.queryByRole('link', {

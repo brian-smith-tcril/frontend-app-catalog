@@ -1,8 +1,7 @@
 import { CheckboxFilter } from '@openedx/paragon';
-import { createIntl } from '@openedx/frontend-base';
+import { IntlShape, createIntl } from '@edx/frontend-platform/i18n';
 
 import { mockCourseListSearchResponse } from '@src/__mocks__';
-import type { IntlShape } from '@src/utils';
 import type { DataTableFilter } from '@src/data/course-list-search/types';
 import { compareFilters, transformAggregationsToFilterChoices } from '../utils';
 import messages from '../messages';

@@ -1,13 +1,14 @@
-import { act, renderHook } from '@testing-library/react';
-import { getSiteConfig, IntlProvider, logError } from '@openedx/frontend-base';
+import { logError } from '@edx/frontend-platform/logging';
+import { IntlProvider } from '@edx/frontend-platform/i18n';
+import { getConfig } from '@edx/frontend-platform';
 
+import { renderHook, act } from '@src/setupTest';
 import { useEnrollment } from '@src/course-about/data/hooks';
 import { mockCourseAboutResponse } from '@src/__mocks__';
 import { useEnrollmentActions } from '../useEnrollmentActions';
 import type { UseEnrollmentActionsTypes } from '../types';
 
-jest.mock('@openedx/frontend-base', () => ({
-  ...jest.requireActual('@openedx/frontend-base'),
+jest.mock('@edx/frontend-platform/logging', () => ({
   logError: jest.fn(),
 }));
 
@@ -57,7 +58,7 @@ describe('useEnrollmentActions', () => {
 
     expect(mockEnrollAndRedirect).toHaveBeenCalledWith(
       mockCourseAboutResponse.id,
-      `${getSiteConfig().lmsBaseUrl}/dashboard`,
+      `${getConfig().LMS_BASE_URL}/dashboard`,
     );
   });
 

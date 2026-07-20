@@ -1,5 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
-
+import { renderHook, act } from '@src/setupTest';
 import type { DataTableFilter } from '@src/data/course-list-search/types';
 import { DEFAULT_PAGE_INDEX, DEFAULT_PAGE_SIZE } from '@src/data/course-list-search/constants';
 import { useFilter } from '../useFilter';

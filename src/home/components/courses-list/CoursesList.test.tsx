@@ -1,54 +1,34 @@
-import {
-  cleanup, render, screen, within,
-} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useNavigate } from 'react-router';
-import { getAppConfig, IntlProvider } from '@openedx/frontend-base';
+import { getConfig } from '@edx/frontend-platform';
 
+import {
+  render, userEvent, cleanup, within, screen, reactRouter,
+} from '@src/setupTest';
 import { mockCourseListSearchResponse } from '@src/__mocks__';
 import { useCourseListSearch } from '@src/data/course-list-search/hooks';
 import CoursesList from './CoursesList';
 
 import messages from './messages';
 
-const COURSES_URL = '/courses';
-const DEFAULT_TEST_INFO_EMAIL = 'support@example.com';
-
-jest.mock('@openedx/frontend-base', () => ({
-  ...jest.requireActual('@openedx/frontend-base'),
-  ErrorPage: ({ message }: { message: string }) => (
-    <div data-testid="error-page">{message}</div>
-  ),
-  getAppConfig: jest.fn(),
-  getUrlByRouteRole: jest.fn(() => COURSES_URL),
-}));
-
-jest.mock('react-router', () => ({
-  ...jest.requireActual('react-router'),
-  useNavigate: jest.fn(),
-}));
-
 jest.mock('@src/data/course-list-search/hooks', () => ({
   useCourseListSearch: jest.fn(),
 }));
 
-const mockedGetAppConfig = getAppConfig as jest.Mock;
-const mockedUseNavigate = useNavigate as jest.Mock;
+jest.mock('@edx/frontend-platform/react', () => ({
+  ErrorPage: ({ message }: { message: string }) => (
+    <div data-testid="error-page">{message}</div>
+  ),
+}));
+
+jest.mock('@edx/frontend-platform', () => ({
+  getConfig: jest.fn(() => ({
+    INFO_EMAIL: process.env.INFO_EMAIL,
+    HOMEPAGE_COURSE_MAX: process.env.HOMEPAGE_COURSE_MAX,
+    ENABLE_COURSE_SORTING_BY_START_DATE: process.env.ENABLE_COURSE_SORTING_BY_START_DATE,
+    NON_BROWSABLE_COURSES: process.env.NON_BROWSABLE_COURSES,
+  })),
+}));
+
 const mockUseCourseListSearch = useCourseListSearch as jest.Mock;
-
-const renderCoursesList = () => render(
-  <IntlProvider locale="en"><MemoryRouter><CoursesList /></MemoryRouter></IntlProvider>,
-);
-
-beforeEach(() => {
-  mockedGetAppConfig.mockReturnValue({
-    INFO_EMAIL: DEFAULT_TEST_INFO_EMAIL,
-    HOMEPAGE_COURSE_MAX: 9,
-    ENABLE_COURSE_SORTING_BY_START_DATE: false,
-    NON_BROWSABLE_COURSES: false,
-  });
-  mockedUseNavigate.mockReturnValue(jest.fn());
-});
 
 afterEach(() => {
   jest.clearAllMocks();
@@ -63,7 +43,7 @@ describe('<CoursesList />', () => {
       data: null,
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
 
     expect(screen.getByTestId('courses-list-loading')).toBeInTheDocument();
   });
@@ -75,11 +55,11 @@ describe('<CoursesList />', () => {
       data: null,
     });
 
-    mockedGetAppConfig.mockReturnValue({
+    (getConfig as jest.Mock).mockReturnValue({
       HOMEPAGE_COURSE_MAX: 2,
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
 
     expect(screen.getAllByTestId('course-card')).toHaveLength(2);
     // Each CourseCard creates 4 skeleton elements (image, header, section, footer)
@@ -94,11 +74,11 @@ describe('<CoursesList />', () => {
       data: null,
     });
 
-    mockedGetAppConfig.mockReturnValue({
+    (getConfig as jest.Mock).mockReturnValue({
       HOMEPAGE_COURSE_MAX: undefined,
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
 
     expect(screen.getByTestId('courses-list-loading')).toBeInTheDocument();
 
@@ -118,7 +98,7 @@ describe('<CoursesList />', () => {
       },
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
     const infoAlert = screen.getByRole('alert');
     expect(within(infoAlert).getByText(messages.noCoursesAvailable.defaultMessage)).toBeInTheDocument();
     expect(within(infoAlert).getByText(messages.noCoursesAvailableMessage.defaultMessage)).toBeInTheDocument();
@@ -131,7 +111,7 @@ describe('<CoursesList />', () => {
       data: mockCourseListSearchResponse,
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
     mockCourseListSearchResponse.results.forEach(course => {
       expect(screen.getByText(course.data.content.displayName)).toBeInTheDocument();
     });
@@ -139,7 +119,7 @@ describe('<CoursesList />', () => {
 
   it('shows "View All Courses" button when more courses are available than max', async () => {
     const mockNavigate = jest.fn();
-    mockedUseNavigate.mockReturnValue(mockNavigate);
+    jest.spyOn(reactRouter, 'useNavigate').mockReturnValue(mockNavigate);
 
     mockUseCourseListSearch.mockReturnValue({
       isLoading: false,
@@ -147,18 +127,18 @@ describe('<CoursesList />', () => {
       data: mockCourseListSearchResponse,
     });
 
-    mockedGetAppConfig.mockReturnValue({
+    (getConfig as jest.Mock).mockReturnValue({
       HOMEPAGE_COURSE_MAX: 1,
       ENABLE_COURSE_SORTING_BY_START_DATE: false,
       NON_BROWSABLE_COURSES: false,
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
     const button = screen.getByText(messages.viewAllCoursesButton.defaultMessage);
 
     expect(button).toBeInTheDocument();
     await userEvent.click(button);
-    expect(mockNavigate).toHaveBeenCalledWith(COURSES_URL);
+    expect(mockNavigate).toHaveBeenCalledWith('/courses');
   });
 
   it('does not show "View All Courses" button when courses ≤ max', () => {
@@ -168,13 +148,13 @@ describe('<CoursesList />', () => {
       data: mockCourseListSearchResponse,
     });
 
-    mockedGetAppConfig.mockReturnValue({
+    (getConfig as jest.Mock).mockReturnValue({
       HOMEPAGE_COURSE_MAX: 3,
       ENABLE_COURSE_SORTING_BY_START_DATE: false,
       NON_BROWSABLE_COURSES: false,
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
     expect(screen.queryByText(messages.viewAllCoursesButton.defaultMessage)).not.toBeInTheDocument();
   });
 
@@ -185,17 +165,17 @@ describe('<CoursesList />', () => {
       data: null,
     });
 
-    mockedGetAppConfig.mockReturnValue({
-      INFO_EMAIL: DEFAULT_TEST_INFO_EMAIL,
+    (getConfig as jest.Mock).mockReturnValue({
+      INFO_EMAIL: process.env.INFO_EMAIL,
     });
 
-    renderCoursesList();
+    render(<CoursesList />);
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveClass('alert-danger');
 
     const errorPage = screen.getByTestId('error-page');
-    expect(errorPage).toHaveTextContent(messages.errorMessage.defaultMessage.replace('{supportEmail}', DEFAULT_TEST_INFO_EMAIL));
+    expect(errorPage).toHaveTextContent(messages.errorMessage.defaultMessage.replace('{supportEmail}', getConfig().INFO_EMAIL));
   });
 
   it('returns null when NON_BROWSABLE_COURSES is enabled', () => {
@@ -205,11 +185,11 @@ describe('<CoursesList />', () => {
       data: mockCourseListSearchResponse,
     });
 
-    mockedGetAppConfig.mockReturnValue({
+    (getConfig as jest.Mock).mockReturnValue({
       NON_BROWSABLE_COURSES: true,
     });
 
-    const { container } = renderCoursesList();
+    const { container } = render(<CoursesList />);
     expect(container.firstChild).toBeNull();
   });
 });

@@ -1,5 +1,0 @@
-####################
-React App i18n HOWTO
-####################
-
-This document has moved to the frontend-base repo: https://github.com/openedx/frontend-base/blob/main/docs/how_tos/i18n.rst
